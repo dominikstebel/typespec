@@ -4,8 +4,10 @@
 using System;
 using System.Collections.Generic;
 using System.Reflection;
+using System.Threading.Tasks;
 using Microsoft.TypeSpec.Generator.Primitives;
 using Microsoft.TypeSpec.Generator.Providers;
+using Microsoft.TypeSpec.Generator.Tests.Providers.NamedTypeSymbolProviders;
 using Microsoft.TypeSpec.Generator.Tests.TestHelpers;
 using NUnit.Framework;
 
@@ -101,6 +103,25 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(serializationProvider));
             Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(optional));
             Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(modelSerializationExtensions));
+        }
+
+        [Test]
+        public async Task InternalCustomizationTypeDoesNotInternalizeGeneratedTypeWithSameSimpleName()
+        {
+            var customCompilation = CompilationHelper.LoadCompilation(
+                [new TestTypeProvider("Error", TypeSignatureModifiers.Internal, ns: "Custom.Models")]);
+            var context = new TestTypeProvider("SampleContext", TypeSignatureModifiers.Public);
+            var generatedError = new TestTypeProvider("Error", TypeSignatureModifiers.Public, ns: "Generated.Models");
+            await MockHelpers.LoadMockGeneratorAsync(
+                createOutputLibrary: () => new TestOutputLibrary(context, generatedError),
+                compilation: () => Task.FromResult(customCompilation));
+            CodeModelGenerator.Instance.AddTypeToKeep(context.Type.FullyQualifiedName);
+            CodeModelGenerator.Instance.AddTypeToKeep(generatedError.Type.FullyQualifiedName);
+
+            ProviderReferenceMapAnalyzer.ApplyPreWriteAccessibility([context, generatedError]);
+
+            Assert.IsTrue(generatedError.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
+            Assert.IsFalse(generatedError.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
         }
 
         private sealed class BodyDependencyTestTypeProvider : TestTypeProvider

@@ -104,7 +104,7 @@ namespace Microsoft.TypeSpec.Generator
         {
             if (customCodeView is NamedTypeSymbolProvider namedTypeSymbolProvider)
             {
-                AddMatchingName(roots, namedTypeSymbolProvider.MetadataSimpleName, generatedTypeNames);
+                AddMatchingName(roots, namedTypeSymbolProvider.MetadataName, generatedTypeNames);
                 return;
             }
 
@@ -284,7 +284,7 @@ namespace Microsoft.TypeSpec.Generator
 
                 if (customCodeView is NamedTypeSymbolProvider namedTypeSymbolProvider)
                 {
-                    AddMatchingName(declarations, namedTypeSymbolProvider.MetadataSimpleName, generatedTypeNames);
+                    AddMatchingName(declarations, namedTypeSymbolProvider.MetadataName, generatedTypeNames);
                 }
                 else
                 {
