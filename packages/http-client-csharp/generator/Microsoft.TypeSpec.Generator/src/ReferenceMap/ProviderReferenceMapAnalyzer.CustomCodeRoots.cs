@@ -315,6 +315,11 @@ namespace Microsoft.TypeSpec.Generator
         private static HashSet<string> GetGeneratedPublicTypeDeclarations(IReadOnlyList<TypeProvider> providers, HashSet<string> generatedTypeNames)
             => GetGeneratedTypeDeclarationsByLastContractAccessibility(providers, generatedTypeNames, TypeSignatureModifiers.Public);
 
+        private static HashSet<string> GetGeneratedPublicTypeDeclarationsFromLastContract(IReadOnlyList<TypeProvider> providers, HashSet<string> generatedTypeNames)
+            => HasApiBaselineDirectory()
+                ? new HashSet<string>(StringComparer.Ordinal)
+                : GetGeneratedPublicTypeDeclarations(providers, generatedTypeNames);
+
         private static HashSet<string> GetGeneratedTypeDeclarationsByLastContractAccessibility(
             IReadOnlyList<TypeProvider> providers,
             HashSet<string> generatedTypeNames,

@@ -57,8 +57,24 @@ namespace Microsoft.TypeSpec.Generator
         private static bool HasApiBaselineDirectory()
         {
             var projectDirectory = CodeModelGenerator.Instance.Configuration.ProjectDirectory;
-            return !string.IsNullOrEmpty(projectDirectory) &&
-                Directory.Exists(Path.GetFullPath(Path.Combine(projectDirectory, "..", "api")));
+            if (string.IsNullOrEmpty(projectDirectory))
+            {
+                return false;
+            }
+
+            var directory = new DirectoryInfo(Path.GetFullPath(projectDirectory));
+            while (directory != null)
+            {
+                if (Directory.Exists(Path.Combine(directory.FullName, "api")) ||
+                    directory.Parent != null && Directory.Exists(Path.Combine(directory.Parent.FullName, "api")))
+                {
+                    return true;
+                }
+
+                directory = directory.Parent;
+            }
+
+            return false;
         }
 
         private static bool IsModelFactoryProvider(TypeProvider provider)

@@ -80,7 +80,10 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
 
         protected override IReadOnlyList<CSharpType> BuildHelperDependencyTypes()
         {
-            var dependencies = new List<CSharpType> { new ClientUriBuilderDefinition().Type };
+            var uriBuilderType = ScmCodeModelGenerator.Instance.TypeFactory.HttpRequestApi.ToExpression().UriBuilderType;
+            var dependencies = uriBuilderType == typeof(ClientUriBuilderDefinition)
+                ? new List<CSharpType> { new ClientUriBuilderDefinition().Type }
+                : [];
             foreach (var serviceMethod in _inputClient.Methods)
             {
                 foreach (var parameter in serviceMethod.Operation.Parameters)
@@ -1217,7 +1220,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                     case ParameterLocation.Query:
                     case ParameterLocation.Header:
                         if (IsContentTypeParameter(inputParam)
-                            && !HasContentTypeBeforeBodyInLastContract(serviceMethod.Name, client.BackCompatProvider))
+                            && !ShouldPreserveContentTypeBeforeBody(methodType, serviceMethod, client.BackCompatProvider))
                         {
                             sortedParams.Add(contentType++, parameter);
                         }
@@ -1259,6 +1262,37 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             return [.. sortedParams.Values];
         }
 
+        private static bool ShouldPreserveContentTypeBeforeBody(
+            ScmMethodKind methodType,
+            InputServiceMethod serviceMethod,
+            TypeProvider backCompatProvider)
+        {
+            if (HasContentTypeBeforeBodyInLastContract(serviceMethod.Name, backCompatProvider))
+            {
+                return true;
+            }
+
+            // The baseline contract used for back-compat may come from a released package and can
+            // lag the generated sources in the repo. For generated convenience methods that expose a
+            // domain-named body parameter, keep the historic contentType-before-body ordering to avoid
+            // repo regen churn while protocol methods continue using the normalized "content" body.
+            return methodType is ScmMethodKind.Convenience && HasNamedBodyParameter(serviceMethod);
+        }
+
+        private static bool HasNamedBodyParameter(InputServiceMethod serviceMethod)
+        {
+            foreach (var parameter in serviceMethod.Parameters)
+            {
+                if (parameter.Location == InputRequestLocation.Body &&
+                    !string.Equals(parameter.Name, "content", StringComparison.OrdinalIgnoreCase))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
         private static ParameterProvider CreateContentTypeParameter(InputParameter inputParam)
         {
             var type = new CSharpType(typeof(string), isNullable: !inputParam.IsRequired);
@@ -1296,13 +1330,12 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
 
         /// <summary>
         /// Checks if the last contract view contains a method matching the given name where
-        /// a "contentType" parameter appears before the body ("content") parameter.
+        /// a "contentType" parameter appears before the body parameter.
         /// If so, we should preserve that ordering for backward compatibility.
         /// </summary>
         private static bool HasContentTypeBeforeBodyInLastContract(string methodName, TypeProvider backCompatProvider)
         {
             const string contentTypeParamName = "contentType";
-            const string contentParamName = "content";
 
             var lastContractMethods = backCompatProvider.LastContractView?.Methods;
             if (lastContractMethods == null || lastContractMethods.Count == 0)
@@ -1330,7 +1363,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                     {
                         contentTypeIndex = i;
                     }
-                    else if (string.Equals(param.Name, contentParamName, StringComparison.OrdinalIgnoreCase))
+                    else if (IsLastContractBodyParameter(param))
                     {
                         bodyIndex = i;
                     }
@@ -1348,6 +1381,16 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             }
 
             return false;
+        }
+
+        private static bool IsLastContractBodyParameter(ParameterProvider parameter)
+        {
+            if (string.Equals(parameter.Name, "content", StringComparison.OrdinalIgnoreCase))
+            {
+                return true;
+            }
+
+            return parameter.Type.Name is "BinaryContent" or "BinaryData" or "RequestContent";
         }
 
         internal static InputModelType GetSpreadParameterModel(InputParameter inputParam)

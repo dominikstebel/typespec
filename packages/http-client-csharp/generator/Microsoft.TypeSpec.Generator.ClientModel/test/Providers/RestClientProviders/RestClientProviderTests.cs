@@ -363,6 +363,79 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.Providers.RestClientPro
         }
 
         [Test]
+        public async Task ContentTypeOrderPreservedFromLastContractViewWithNamedBody()
+        {
+            var contentTypeEnum = InputFactory.StringEnum("ContentTypeEnum",
+                [("application/json", "application/json"), ("application/xml", "application/xml")],
+                isExtensible: true);
+            var contentTypeHeader = InputFactory.HeaderParameter(
+                "contentType",
+                contentTypeEnum,
+                isRequired: true,
+                isContentType: true,
+                serializedName: "Content-Type");
+            var bodyParam = InputFactory.BodyParameter("schemaContent", InputPrimitiveType.String, isRequired: true);
+            var groupNameParam = InputFactory.PathParameter("groupName", InputPrimitiveType.String, isRequired: true);
+            var pathParam = InputFactory.PathParameter("schemaName", InputPrimitiveType.String, isRequired: true);
+            var methodGroupNameParam = InputFactory.MethodParameter(
+                "groupName",
+                InputPrimitiveType.String,
+                isRequired: true,
+                location: InputRequestLocation.Path);
+            var methodSchemaNameParam = InputFactory.MethodParameter(
+                "schemaName",
+                InputPrimitiveType.String,
+                isRequired: true,
+                location: InputRequestLocation.Path);
+            var methodContentTypeParam = InputFactory.MethodParameter(
+                "contentType",
+                contentTypeEnum,
+                isRequired: true,
+                serializedName: "Content-Type",
+                location: InputRequestLocation.Header);
+            var methodBodyParam = InputFactory.MethodParameter(
+                "schemaContent",
+                InputPrimitiveType.String,
+                isRequired: true,
+                location: InputRequestLocation.Body);
+
+            var operation = InputFactory.Operation(
+                "RegisterSchema",
+                parameters: [groupNameParam, pathParam, contentTypeHeader, bodyParam]);
+
+            var serviceMethod = InputFactory.BasicServiceMethod(
+                "RegisterSchema",
+                operation,
+                parameters: [methodGroupNameParam, methodSchemaNameParam, methodContentTypeParam, methodBodyParam]);
+
+            var client = InputFactory.Client("TestClient", methods: [serviceMethod]);
+
+            var generator = await MockHelpers.LoadMockGeneratorAsync(
+                clients: () => [client],
+                lastContractCompilation: async () => await Helpers.GetCompilationFromDirectoryAsync());
+
+            var clientProvider = generator.Object.OutputLibrary.TypeProviders.OfType<ClientProvider>().FirstOrDefault();
+            Assert.IsNotNull(clientProvider);
+            Assert.IsNotNull(clientProvider!.LastContractView);
+
+            var methodParameters = RestClientProvider.GetMethodParameters(serviceMethod, ScmMethodKind.Protocol, clientProvider!);
+
+            Assert.AreEqual(4, methodParameters.Count);
+            Assert.AreEqual("groupName", methodParameters[0].Name);
+            Assert.AreEqual("schemaName", methodParameters[1].Name);
+            Assert.AreEqual("contentType", methodParameters[2].Name);
+            Assert.AreEqual("content", methodParameters[3].Name);
+
+            var convenienceMethodParameters = RestClientProvider.GetMethodParameters(serviceMethod, ScmMethodKind.Convenience, clientProvider!);
+
+            Assert.AreEqual(4, convenienceMethodParameters.Count);
+            Assert.AreEqual("groupName", convenienceMethodParameters[0].Name);
+            Assert.AreEqual("schemaName", convenienceMethodParameters[1].Name);
+            Assert.AreEqual("contentType", convenienceMethodParameters[2].Name);
+            Assert.AreEqual("schemaContent", convenienceMethodParameters[3].Name);
+        }
+
+        [Test]
         public async Task ParameterNamePreservedFromLastContractView()
         {
             // A non-paging, non-special parameter that the generator renames from "oldParam" to

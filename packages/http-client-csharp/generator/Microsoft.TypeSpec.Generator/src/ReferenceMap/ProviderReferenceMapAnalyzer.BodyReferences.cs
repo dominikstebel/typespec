@@ -54,7 +54,6 @@ namespace Microsoft.TypeSpec.Generator
             if (IsSerializationProvider(provider))
             {
                 AddMatchingName(references, "Optional", nodes);
-                AddMatchingName(references, "Utf8JsonRequestContent", nodes);
                 AddMatchingName(references, "ModelSerializationExtensions", nodes);
                 AddSerializationExtensionReferences(references, provider, nodes);
             }
@@ -120,10 +119,6 @@ namespace Microsoft.TypeSpec.Generator
         private static void AddMethodInfrastructureReferences(HashSet<string> references, MethodProvider method, HashSet<string> nodes)
         {
             AddReturnTypeInfrastructureReferences(references, method.Signature.ReturnType, nodes);
-            foreach (var parameter in method.Signature.Parameters)
-            {
-                AddRequestContentInfrastructureReferences(references, parameter.Type, nodes);
-            }
         }
 
         private static void AddReturnTypeInfrastructureReferences(HashSet<string> references, CSharpType? returnType, HashSet<string> nodes)
@@ -151,25 +146,6 @@ namespace Microsoft.TypeSpec.Generator
                 {
                     AddMatchingName(references, $"{BuildOperationSourceTypeName(type.Arguments[0])}OperationSource", nodes);
                 }
-            }
-        }
-
-        private static void AddRequestContentInfrastructureReferences(HashSet<string> references, CSharpType? type, HashSet<string> nodes)
-        {
-            if (type == null)
-            {
-                return;
-            }
-
-            if (string.Equals(type.Name, "RequestContent", StringComparison.Ordinal))
-            {
-                AddMatchingName(references, "BinaryContentHelper", nodes);
-                AddMatchingName(references, "Utf8JsonRequestContent", nodes);
-            }
-
-            foreach (var argument in type.Arguments)
-            {
-                AddRequestContentInfrastructureReferences(references, argument, nodes);
             }
         }
 
@@ -357,7 +333,7 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             AddTypeReference(references, dependency, nodes);
-            if (includeSimpleNameReferences)
+            if (includeSimpleNameReferences && !string.IsNullOrEmpty(dependency.Namespace))
             {
                 AddMatchingName(references, dependency.Name, nodes);
             }
