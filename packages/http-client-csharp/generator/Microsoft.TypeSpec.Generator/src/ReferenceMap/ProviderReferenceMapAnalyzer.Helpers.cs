@@ -41,8 +41,21 @@ namespace Microsoft.TypeSpec.Generator
         }
 
         private static bool IsClientProviderRoot(TypeProvider provider, bool publicOnly) =>
-            provider.IsClientProvider &&
+            IsClientProvider(provider) &&
             (!publicOnly || !HasApiBaselineDirectory() && provider.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
+
+        private static bool IsClientProvider(TypeProvider provider)
+        {
+            for (var type = provider.GetType(); type != null && type != typeof(TypeProvider); type = type.BaseType)
+            {
+                if (string.Equals(type.Name, "ClientProvider", StringComparison.Ordinal))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
 
         private static bool IsAdditionalRootProvider(TypeProvider provider, HashSet<string> roots, HashSet<string> nodes)
         {

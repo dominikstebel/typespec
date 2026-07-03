@@ -89,7 +89,7 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
         public void SerializationProviderInfrastructureRootsUseSerializationProviderRelationship()
         {
             var serializationProvider = new TestTypeProvider("SampleModelSerializer", TypeSignatureModifiers.Public);
-            var model = new ClientRootWithSerializationProvider("SampleModel", serializationProvider);
+            var model = new ClientProvider("SampleModel", serializationProvider);
             var optional = new TestTypeProvider("Optional", TypeSignatureModifiers.Public);
             var modelSerializationExtensions = new TestTypeProvider("ModelSerializationExtensions", TypeSignatureModifiers.Public);
             MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(
@@ -137,17 +137,15 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             protected internal override IReadOnlyList<CSharpType> BuildBodyDependencyTypes() => _bodyDependencyTypes;
         }
 
-        private sealed class ClientRootWithSerializationProvider : TestTypeProvider
+        private sealed class ClientProvider : TestTypeProvider
         {
             private readonly TypeProvider[] _serializationProviders;
 
-            public ClientRootWithSerializationProvider(string name, params TypeProvider[] serializationProviders)
+            public ClientProvider(string name, params TypeProvider[] serializationProviders)
                 : base(name, TypeSignatureModifiers.Public)
             {
                 _serializationProviders = serializationProviders;
             }
-
-            protected internal override bool IsClientProvider => true;
 
             protected override TypeProvider[] BuildSerializationProviders() => _serializationProviders;
         }
