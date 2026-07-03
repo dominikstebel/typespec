@@ -14,18 +14,28 @@ namespace Microsoft.TypeSpec.Generator
         private static bool IsKept(CSharpType type, HashSet<string> roots, HashSet<string> nodes)
         {
             var providerName = GetProviderTypeName(type);
+            return IsKeptName(providerName, type.Name, roots, nodes);
+        }
+
+        private static bool IsKeptName(string providerName, HashSet<string> roots, HashSet<string> nodes)
+        {
+            return IsKeptName(providerName, StripGenericArity(GetSimpleName(providerName)), roots, nodes);
+        }
+
+        private static bool IsKeptName(string providerName, string simpleName, HashSet<string> roots, HashSet<string> nodes)
+        {
             if (roots.Contains(providerName) && nodes.Contains(providerName))
             {
                 return true;
             }
 
-            if (!roots.Contains(type.Name))
+            if (!roots.Contains(simpleName))
             {
                 return false;
             }
 
             var simpleNameLookup = _simpleNameLookupCache.GetValue(nodes, BuildSimpleNameLookup);
-            return simpleNameLookup.TryGetValue(type.Name, out var matches) &&
+            return simpleNameLookup.TryGetValue(simpleName, out var matches) &&
                 matches.Length == 1 &&
                 string.Equals(matches[0], providerName, StringComparison.Ordinal);
         }

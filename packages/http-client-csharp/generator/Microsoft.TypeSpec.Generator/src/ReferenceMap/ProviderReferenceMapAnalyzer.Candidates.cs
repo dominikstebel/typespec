@@ -75,14 +75,19 @@ namespace Microsoft.TypeSpec.Generator
             HashSet<string> customInternalDeclarations,
             HashSet<string> customInternalBoundaryNodes,
             HashSet<string> publicizeRoots,
+            HashSet<string> nodes,
             IReadOnlyDictionary<string, HashSet<string>> references)
         {
             var candidates = new HashSet<string>(StringComparer.Ordinal);
             foreach (var node in internalizeDeclaredNodes)
             {
+                var isNonRootKept = IsKeptName(node, CodeModelGenerator.Instance.NonRootTypes, nodes);
                 if (!publicizeReachable.Contains(node) ||
                     customInternalDeclarations.Contains(node) ||
-                    customInternalBoundaryNodes.Contains(node) && !publicizeRoots.Contains(node))
+                    customInternalBoundaryNodes.Contains(node) && (!publicizeRoots.Contains(node) || isNonRootKept) ||
+                    isNonRootKept &&
+                        references.TryGetValue(node, out var nodeReferences) &&
+                        nodeReferences.Overlaps(customInternalDeclarations))
                 {
                     candidates.Add(node);
                 }
@@ -96,8 +101,9 @@ namespace Microsoft.TypeSpec.Generator
                 addedCandidate = false;
                 foreach (var node in internalizeDeclaredNodes)
                 {
+                    var isNonRootKept = IsKeptName(node, CodeModelGenerator.Instance.NonRootTypes, nodes);
                     if (candidates.Contains(node) ||
-                        publicizeRoots.Contains(node) ||
+                        publicizeRoots.Contains(node) && !isNonRootKept ||
                         !references.TryGetValue(node, out var nodeReferences) ||
                         !nodeReferences.Overlaps(candidates))
                     {
@@ -109,6 +115,10 @@ namespace Microsoft.TypeSpec.Generator
                 }
             }
 
+            // Non-root keep entries preserve the declared type/file, but deliberately do not
+            // root their dependencies. They can still be internalized when needed to avoid
+            // exposing custom/internal types through a public surface.
+            RemoveKeptNonRootNames(candidates, nodes, references, customInternalDeclarations, customInternalBoundaryNodes);
             return candidates;
         }
 
@@ -175,6 +185,7 @@ namespace Microsoft.TypeSpec.Generator
 
             removeRoots.UnionWith(customRemovalRoots);
             AddMatchingNamesWithSimpleNameSuffix(removeRoots, "ReferenceType", graph.Nodes);
+            AddKeptNonRootNames(removeRoots, graph.Nodes);
             AddCustomCodeExtensionRoots(removeRoots, generatedProviders, graph.Nodes);
             AddCustomizationBackedExtensionRoots(removeRoots, graph.Nodes);
             AddCustomRequestHeaderExtensionsRoot(removeRoots, generatedProviders, graph.Nodes);
@@ -194,6 +205,72 @@ namespace Microsoft.TypeSpec.Generator
             var removeDeclaredNodes = GetPostProcessorDeclaredNodes(generatedProviders, graph.Nodes, publicOnly: false);
             removeDeclaredNodes.ExceptWith(removeReachable);
             return removeDeclaredNodes;
+        }
+
+        private static void AddKeptNonRootNames(HashSet<string> roots, HashSet<string> nodes)
+        {
+            var nonRootTypes = CodeModelGenerator.Instance.NonRootTypes;
+            foreach (var node in nodes)
+            {
+                if (IsKeptName(node, nonRootTypes, nodes))
+                {
+                    roots.Add(node);
+                }
+            }
+        }
+
+        private static void RemoveKeptNonRootNames(
+            HashSet<string> candidates,
+            HashSet<string> nodes,
+            IReadOnlyDictionary<string, HashSet<string>> references,
+            HashSet<string> customInternalDeclarations,
+            HashSet<string> customInternalBoundaryNodes)
+        {
+            var nonRootTypes = CodeModelGenerator.Instance.NonRootTypes;
+            foreach (var node in nodes)
+            {
+                if (customInternalDeclarations.Contains(node) ||
+                    customInternalBoundaryNodes.Contains(node))
+                {
+                    continue;
+                }
+
+                if (IsKeptName(node, nonRootTypes, nodes) &&
+                    !HasCandidateReference(node, candidates, references))
+                {
+                    candidates.Remove(node);
+                }
+            }
+        }
+
+        private static bool HasCandidateReference(
+            string node,
+            HashSet<string> candidates,
+            IReadOnlyDictionary<string, HashSet<string>> references)
+        {
+            if (references.TryGetValue(node, out var nodeReferences))
+            {
+                foreach (var reference in nodeReferences)
+                {
+                    if (!string.Equals(reference, node, StringComparison.Ordinal) &&
+                        candidates.Contains(reference))
+                    {
+                        return true;
+                    }
+                }
+            }
+
+            foreach (var (source, sourceReferences) in references)
+            {
+                if (!string.Equals(source, node, StringComparison.Ordinal) &&
+                    candidates.Contains(source) &&
+                    sourceReferences.Contains(node))
+                {
+                    return true;
+                }
+            }
+
+            return false;
         }
     }
 }

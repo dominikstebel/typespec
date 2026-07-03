@@ -201,6 +201,7 @@ namespace Microsoft.TypeSpec.Generator
                 customInternalDeclarations,
                 customInternalBoundaryNodes,
                 publicizeRoots,
+                graph.Nodes,
                 internalizeReferences);
             var publicizeRootExclusions = GetRootNames(
                 providers,

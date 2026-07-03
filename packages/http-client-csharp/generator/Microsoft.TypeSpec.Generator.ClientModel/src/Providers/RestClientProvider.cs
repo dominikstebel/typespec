@@ -85,7 +85,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             {
                 foreach (var parameter in serviceMethod.Operation.Parameters)
                 {
-                    if (IsGeneratedContentTypeMethodParameter(parameter) ||
+                    if (IsContentTypeParameter(parameter) ||
                         parameter is not InputHeaderParameter and not InputQueryParameter)
                     {
                         continue;
@@ -1172,7 +1172,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                 // when one was already published.
                 UpdateParameterNameWithBackCompat(inputParam, inputParam.Name, client.BackCompatProvider, serviceMethod);
 
-                ParameterProvider? parameter = IsGeneratedContentTypeMethodParameter(inputParam) &&
+                ParameterProvider? parameter = IsContentTypeParameter(inputParam) &&
                     methodType is ScmMethodKind.Protocol or ScmMethodKind.CreateRequest
                     ? CreateContentTypeParameter(inputParam)
                     : ScmCodeModelGenerator.Instance.TypeFactory.CreateParameter(inputParam)?.ToPublicInputParameter();
@@ -1216,7 +1216,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                         break;
                     case ParameterLocation.Query:
                     case ParameterLocation.Header:
-                        if (IsGeneratedContentTypeMethodParameter(inputParam)
+                        if (IsContentTypeParameter(inputParam)
                             && !HasContentTypeBeforeBodyInLastContract(serviceMethod.Name, client.BackCompatProvider))
                         {
                             sortedParams.Add(contentType++, parameter);
@@ -1284,6 +1284,11 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             }
             return false;
         }
+
+        private static bool IsContentTypeParameter(InputParameter parameter) =>
+            parameter is InputHeaderParameter { IsContentType: true } ||
+                parameter is InputMethodParameter { Location: InputRequestLocation.Header } &&
+                string.Equals(parameter.SerializedName, "Content-Type", StringComparison.OrdinalIgnoreCase);
 
         private static bool IsGeneratedContentTypeMethodParameter(InputParameter parameter) =>
             parameter is InputMethodParameter { Location: InputRequestLocation.Header } &&
