@@ -173,6 +173,8 @@ namespace Microsoft.TypeSpec.Generator
             return constructor;
         }
 
+        internal ConstructorProvider? VisitConstructorProvider(ConstructorProvider constructor) => VisitConstructor(constructor);
+
         /// <summary>
         /// Visits a <see cref="MethodProvider"/> and returns a possibly modified version of it.
         /// </summary>
@@ -306,5 +308,7 @@ namespace Microsoft.TypeSpec.Generator
         {
             return field;
         }
+
+        internal FieldProvider? VisitFieldProvider(FieldProvider field) => VisitField(field);
     }
 }
