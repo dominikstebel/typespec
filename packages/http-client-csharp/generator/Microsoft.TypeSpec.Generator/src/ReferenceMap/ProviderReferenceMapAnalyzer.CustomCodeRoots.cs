@@ -104,7 +104,7 @@ namespace Microsoft.TypeSpec.Generator
         {
             if (customCodeView is NamedTypeSymbolProvider namedTypeSymbolProvider)
             {
-                AddMatchingName(roots, namedTypeSymbolProvider.MetadataName, generatedTypeNames);
+                AddExactMetadataNameMatch(roots, namedTypeSymbolProvider.MetadataName, generatedTypeNames);
                 return;
             }
 
@@ -138,7 +138,7 @@ namespace Microsoft.TypeSpec.Generator
         private static void AddCustomCodeViewRoots(HashSet<string> roots, TypeProvider customCodeView, HashSet<string> generatedTypeNames, bool publicOnly)
         {
             AddTypeReference(roots, customCodeView.BaseType, generatedTypeNames);
-            AddProviderBodyDependencyTypes(roots, customCodeView.SignatureDependencyTypes, generatedTypeNames, includeSimpleNameReferences: true);
+            AddProviderBodyDependencyTypes(roots, customCodeView.SignatureDependencyTypes, generatedTypeNames, includeSimpleNameReferences: true, includeUnqualifiedSimpleNameReferences: true);
             if (!publicOnly)
             {
                 AddProviderBodyDependencyTypes(roots, customCodeView.BodyDependencyTypes, generatedTypeNames, includeSimpleNameReferences: true);
@@ -284,7 +284,7 @@ namespace Microsoft.TypeSpec.Generator
 
                 if (customCodeView is NamedTypeSymbolProvider namedTypeSymbolProvider)
                 {
-                    AddMatchingName(declarations, namedTypeSymbolProvider.MetadataName, generatedTypeNames);
+                    AddExactMetadataNameMatch(declarations, namedTypeSymbolProvider.MetadataName, generatedTypeNames);
                 }
                 else
                 {
@@ -293,6 +293,32 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             return declarations;
+        }
+
+        private static void AddExactMetadataNameMatch(HashSet<string> target, string metadataName, HashSet<string> generatedTypeNames)
+        {
+            var normalizedName = NormalizeMetadataTypeName(metadataName);
+            if (!string.IsNullOrEmpty(normalizedName) && generatedTypeNames.Contains(normalizedName))
+            {
+                target.Add(normalizedName);
+            }
+        }
+
+        private static string NormalizeMetadataTypeName(string metadataName)
+        {
+            var arrayIndex = metadataName.IndexOf('[', StringComparison.Ordinal);
+            if (arrayIndex > 0)
+            {
+                metadataName = metadataName.Substring(0, arrayIndex);
+            }
+
+            var genericIndex = metadataName.IndexOf('<', StringComparison.Ordinal);
+            if (genericIndex > 0)
+            {
+                metadataName = metadataName.Substring(0, genericIndex);
+            }
+
+            return metadataName;
         }
 
         private static HashSet<string> GetGeneratedPersistableModelProxyTypeNames(IReadOnlyList<TypeProvider> providers, HashSet<string> generatedTypeNames)

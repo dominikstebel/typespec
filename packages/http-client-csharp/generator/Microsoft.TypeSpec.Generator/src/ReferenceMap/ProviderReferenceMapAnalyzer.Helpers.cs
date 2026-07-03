@@ -417,6 +417,21 @@ namespace Microsoft.TypeSpec.Generator
             }
         }
 
+        private static void AddUnambiguousMatchingName(HashSet<string> target, string name, HashSet<string> nodes)
+        {
+            if (nodes.Contains(name))
+            {
+                target.Add(name);
+                return;
+            }
+
+            var simpleNameLookup = _simpleNameLookupCache.GetValue(nodes, BuildSimpleNameLookup);
+            if (simpleNameLookup.TryGetValue(name, out var matches) && matches.Length == 1)
+            {
+                target.Add(matches[0]);
+            }
+        }
+
         private static void AddMatchingNamesWithSimpleNameSuffix(HashSet<string> target, string suffix, HashSet<string> nodes)
         {
             foreach (var node in nodes)

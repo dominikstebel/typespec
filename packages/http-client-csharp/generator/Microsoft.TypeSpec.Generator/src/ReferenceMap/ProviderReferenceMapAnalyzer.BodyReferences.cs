@@ -313,11 +313,12 @@ namespace Microsoft.TypeSpec.Generator
             HashSet<string> references,
             IReadOnlyList<CSharpType> dependencies,
             HashSet<string> nodes,
-            bool includeSimpleNameReferences = false)
+            bool includeSimpleNameReferences = false,
+            bool includeUnqualifiedSimpleNameReferences = false)
         {
             foreach (var dependency in dependencies)
             {
-                AddProviderBodyDependencyType(references, dependency, nodes, includeSimpleNameReferences);
+                AddProviderBodyDependencyType(references, dependency, nodes, includeSimpleNameReferences, includeUnqualifiedSimpleNameReferences);
             }
         }
 
@@ -325,7 +326,8 @@ namespace Microsoft.TypeSpec.Generator
             HashSet<string> references,
             CSharpType? dependency,
             HashSet<string> nodes,
-            bool includeSimpleNameReferences)
+            bool includeSimpleNameReferences,
+            bool includeUnqualifiedSimpleNameReferences)
         {
             if (dependency == null)
             {
@@ -337,11 +339,15 @@ namespace Microsoft.TypeSpec.Generator
             {
                 AddMatchingName(references, dependency.Name, nodes);
             }
+            else if (includeUnqualifiedSimpleNameReferences && string.IsNullOrEmpty(dependency.Namespace))
+            {
+                AddUnambiguousMatchingName(references, dependency.Name, nodes);
+            }
             AddMatchingName(references, $"{dependency.Name}Extensions", nodes);
 
             foreach (var argument in dependency.Arguments)
             {
-                AddProviderBodyDependencyType(references, argument, nodes, includeSimpleNameReferences);
+                AddProviderBodyDependencyType(references, argument, nodes, includeSimpleNameReferences, includeUnqualifiedSimpleNameReferences);
             }
         }
 

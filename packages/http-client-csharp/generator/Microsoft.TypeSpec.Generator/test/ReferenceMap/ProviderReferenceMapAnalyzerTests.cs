@@ -124,6 +124,19 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             Assert.IsFalse(generatedError.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
         }
 
+        [Test]
+        public void PublicCustomCodeArraySignatureKeepsGeneratedTypePublic()
+        {
+            var customCodeView = new SignatureDependencyTestTypeProvider("PublicCustomApi", TypeSignatureModifiers.Public, CreateNamedType("GeneratedModel", string.Empty));
+            var generatedModel = new CustomizableTestTypeProvider("GeneratedModel", TypeSignatureModifiers.Public, customCodeView, ns: "Generated.Models");
+            MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(generatedModel));
+
+            ProviderReferenceMapAnalyzer.ApplyPreWriteAccessibility([generatedModel]);
+
+            Assert.IsTrue(generatedModel.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
+            Assert.IsFalse(generatedModel.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
+        }
+
         private sealed class BodyDependencyTestTypeProvider : TestTypeProvider
         {
             private readonly CSharpType[] _bodyDependencyTypes;
@@ -135,6 +148,32 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             }
 
             protected internal override IReadOnlyList<CSharpType> BuildBodyDependencyTypes() => _bodyDependencyTypes;
+        }
+
+        private sealed class SignatureDependencyTestTypeProvider : TestTypeProvider
+        {
+            private readonly CSharpType[] _signatureDependencyTypes;
+
+            public SignatureDependencyTestTypeProvider(string name, TypeSignatureModifiers declarationModifiers, params CSharpType[] signatureDependencyTypes)
+                : base(name, declarationModifiers)
+            {
+                _signatureDependencyTypes = signatureDependencyTypes;
+            }
+
+            protected internal override IReadOnlyList<CSharpType> BuildSignatureDependencyTypes() => _signatureDependencyTypes;
+        }
+
+        private sealed class CustomizableTestTypeProvider : TestTypeProvider
+        {
+            private readonly TypeProvider _customCodeView;
+
+            public CustomizableTestTypeProvider(string name, TypeSignatureModifiers declarationModifiers, TypeProvider customCodeView, string ns)
+                : base(name, declarationModifiers, ns: ns)
+            {
+                _customCodeView = customCodeView;
+            }
+
+            private protected override TypeProvider? BuildCustomCodeView(string? generatedTypeName = default, string? generatedTypeNamespace = default) => _customCodeView;
         }
 
         private sealed class ClientProvider : TestTypeProvider
