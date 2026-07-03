@@ -111,21 +111,28 @@ namespace Microsoft.TypeSpec.Generator
                 generatedInternalDeclarations,
                 generatedDiscriminatorBaseNames);
 
-            // Body-only generated dependencies are needed to avoid deleting helper files, but they do
-            // not contribute to public API reachability for internalization.
-            AddGeneratedBodyReferences(providers, graph);
-            var removeCandidates = GetRemovalCandidates(
-                providers,
-                generatedProviders,
-                graph,
-                customRemovalRoots,
-                generatedDiscriminatorBaseNames);
+            var removeCandidates = new HashSet<string>(StringComparer.Ordinal);
+            if (Configuration.UnreferencedTypesHandling == Configuration.UnreferencedTypesHandlingOption.RemoveOrInternalize)
+            {
+                // Body-only generated dependencies are needed to avoid deleting helper files, but they do
+                // not contribute to public API reachability for internalization.
+                AddGeneratedBodyReferences(providers, graph);
+                removeCandidates = GetRemovalCandidates(
+                    providers,
+                    generatedProviders,
+                    graph,
+                    customRemovalRoots,
+                    generatedDiscriminatorBaseNames);
+            }
 
             _latestResult = new ProviderReferenceMapResult(
                 internalizeCandidates,
                 publicizeCandidates,
                 removeCandidates);
-            RemoveMethodsFromModelFactory(GetSimpleNames(removeCandidates));
+            if (Configuration.UnreferencedTypesHandling == Configuration.UnreferencedTypesHandlingOption.RemoveOrInternalize)
+            {
+                RemoveMethodsFromModelFactory(GetSimpleNames(removeCandidates));
+            }
         }
 
         private static (HashSet<string> InternalizeCandidates, HashSet<string> PublicizeCandidates) GetPreWriteAccessibilityCandidates(IReadOnlyList<TypeProvider> providers)

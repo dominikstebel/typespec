@@ -37,11 +37,11 @@ namespace Microsoft.TypeSpec.Generator
                     GetNonEnumStructuredBodyReferenceTypes(provider, graph.Nodes),
                     graph.Nodes);
                 AddProviderBodyDependencyTypes(graph.References[providerName], provider.BodyDependencyTypes, graph.Nodes);
-                AddProviderInfrastructureReferences(graph.References[providerName], provider, graph.Nodes);
+                AddProviderInfrastructureReferences(graph.References[providerName], provider, isSerializationProvider, graph.Nodes);
             }
         }
 
-        private static void AddProviderInfrastructureReferences(HashSet<string> references, TypeProvider provider, HashSet<string> nodes)
+        private static void AddProviderInfrastructureReferences(HashSet<string> references, TypeProvider provider, bool isSerializationProvider, HashSet<string> nodes)
         {
             AddMatchingName(references, "ProviderConstants", nodes);
             AddMatchingName(references, "TypeFormatters", nodes);
@@ -51,7 +51,7 @@ namespace Microsoft.TypeSpec.Generator
                 AddSerializationExtensionReferences(references, provider, nodes);
             }
 
-            if (IsSerializationProvider(provider))
+            if (isSerializationProvider)
             {
                 AddMatchingName(references, "Optional", nodes);
                 AddMatchingName(references, "ModelSerializationExtensions", nodes);

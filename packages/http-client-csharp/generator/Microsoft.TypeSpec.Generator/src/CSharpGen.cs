@@ -93,50 +93,56 @@ namespace Microsoft.TypeSpec.Generator
                 outputType.ProcessTypeForBackCompatibility();
             }
 
-            generatedCodeWorkspace.ApplyPreWriteAccessibility(output.TypeProviders);
-            generatedCodeWorkspace.AnalyzeProviderReferenceMap(output.TypeProviders);
-
-            foreach (var outputType in output.TypeProviders)
+            try
             {
-                if (!ProviderReferenceMapAnalyzer.ShouldWriteProvider(outputType))
-                {
-                    continue;
-                }
+                generatedCodeWorkspace.ApplyPreWriteAccessibility(output.TypeProviders);
+                generatedCodeWorkspace.AnalyzeProviderReferenceMap(output.TypeProviders);
 
-                if (outputType is ModelFactoryProvider && outputType.Methods.Count == 0)
+                foreach (var outputType in output.TypeProviders)
                 {
-                    continue;
-                }
-
-                var writer = CodeModelGenerator.Instance.GetWriter(outputType);
-                generateFilesTasks.Add(generatedCodeWorkspace.AddGeneratedFile(writer.Write()));
-
-                foreach (var serialization in outputType.SerializationProviders)
-                {
-                    if (!ProviderReferenceMapAnalyzer.ShouldWriteProvider(serialization))
+                    if (!ProviderReferenceMapAnalyzer.ShouldWriteProvider(outputType))
                     {
                         continue;
                     }
 
-                    writer = CodeModelGenerator.Instance.GetWriter(serialization);
+                    if (outputType is ModelFactoryProvider && outputType.Methods.Count == 0)
+                    {
+                        continue;
+                    }
+
+                    var writer = CodeModelGenerator.Instance.GetWriter(outputType);
                     generateFilesTasks.Add(generatedCodeWorkspace.AddGeneratedFile(writer.Write()));
+
+                    foreach (var serialization in outputType.SerializationProviders)
+                    {
+                        if (!ProviderReferenceMapAnalyzer.ShouldWriteProvider(serialization))
+                        {
+                            continue;
+                        }
+
+                        writer = CodeModelGenerator.Instance.GetWriter(serialization);
+                        generateFilesTasks.Add(generatedCodeWorkspace.AddGeneratedFile(writer.Write()));
+                    }
                 }
+
+                // Add all the generated files to the workspace
+                await Task.WhenAll(generateFilesTasks);
+
+                ProviderReferenceMapAnalyzer.RestorePreWriteModelFactoryMethods();
+
+                LoggingHelpers.LogElapsedTime("All generated types have been written into memory");
+
+                // Delete any old generated files
+                DeleteDirectory(generatedSourceOutputPath, _filesToKeep);
+
+                LoggingHelpers.LogElapsedTime("All old generated files have been deleted");
+
+                await generatedCodeWorkspace.PostProcessAsync();
             }
-
-            // Add all the generated files to the workspace
-            await Task.WhenAll(generateFilesTasks);
-
-            ProviderReferenceMapAnalyzer.RestorePreWriteModelFactoryMethods();
-
-            LoggingHelpers.LogElapsedTime("All generated types have been written into memory");
-
-            // Delete any old generated files
-            DeleteDirectory(generatedSourceOutputPath, _filesToKeep);
-
-            LoggingHelpers.LogElapsedTime("All old generated files have been deleted");
-
-            await generatedCodeWorkspace.PostProcessAsync();
-            ProviderReferenceMapAnalyzer.ResetPreWriteAccessibility();
+            finally
+            {
+                ProviderReferenceMapAnalyzer.ResetPreWriteAccessibility();
+            }
 
             var generatedFiles = new List<(string Name, string Text)>();
             await foreach (var file in generatedCodeWorkspace.GetGeneratedFilesAsync())

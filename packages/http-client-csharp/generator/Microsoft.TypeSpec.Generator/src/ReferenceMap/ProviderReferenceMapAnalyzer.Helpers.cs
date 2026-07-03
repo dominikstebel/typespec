@@ -332,13 +332,6 @@ namespace Microsoft.TypeSpec.Generator
             return false;
         }
 
-        private static bool IsSerializationProvider(TypeProvider provider)
-        {
-            var relativePath = provider.RelativeFilePath.Replace('\\', '/');
-            return relativePath.EndsWith(".Serialization.cs", StringComparison.Ordinal) ||
-                relativePath.EndsWith(".Serialization.Multipart.cs", StringComparison.Ordinal);
-        }
-
         private static void AddInitializationHelperRoot(HashSet<string> roots, CSharpType? type, HashSet<string> nodes)
         {
             if (type == null)

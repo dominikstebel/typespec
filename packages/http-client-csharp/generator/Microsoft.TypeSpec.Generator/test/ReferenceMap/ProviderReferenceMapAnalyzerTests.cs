@@ -66,6 +66,43 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             Assert.IsFalse(ProviderReferenceMapAnalyzer.ShouldWriteProvider(generatedError));
         }
 
+        [Test]
+        public void InternalizeModeDoesNotRemoveUnreferencedProviders()
+        {
+            var context = new TestTypeProvider("SampleContext", TypeSignatureModifiers.Public);
+            var unusedModel = new TestTypeProvider("UnusedModel", TypeSignatureModifiers.Public);
+            MockHelpers.LoadMockGenerator(
+                createOutputLibrary: () => new TestOutputLibrary(context, unusedModel),
+                configuration: "{\"unreferenced-types-handling\":\"internalize\"}");
+            CodeModelGenerator.Instance.AddTypeToKeep(context.Type.FullyQualifiedName);
+
+            ProviderReferenceMapAnalyzer.Analyze([context, unusedModel]);
+
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(context));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(unusedModel));
+            Assert.IsEmpty(ProviderReferenceMapAnalyzer.LatestResult!.RemoveCandidates);
+        }
+
+        [Test]
+        public void SerializationProviderInfrastructureRootsUseSerializationProviderRelationship()
+        {
+            var serializationProvider = new TestTypeProvider("SampleModelSerializer", TypeSignatureModifiers.Public);
+            var model = new ClientRootWithSerializationProvider("SampleModel", serializationProvider);
+            var optional = new TestTypeProvider("Optional", TypeSignatureModifiers.Public);
+            var modelSerializationExtensions = new TestTypeProvider("ModelSerializationExtensions", TypeSignatureModifiers.Public);
+            MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(
+                model,
+                serializationProvider,
+                optional,
+                modelSerializationExtensions));
+
+            ProviderReferenceMapAnalyzer.Analyze([model, serializationProvider, optional, modelSerializationExtensions]);
+
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(serializationProvider));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(optional));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(modelSerializationExtensions));
+        }
+
         private sealed class BodyDependencyTestTypeProvider : TestTypeProvider
         {
             private readonly CSharpType[] _bodyDependencyTypes;
@@ -77,6 +114,21 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             }
 
             protected internal override IReadOnlyList<CSharpType> BuildBodyDependencyTypes() => _bodyDependencyTypes;
+        }
+
+        private sealed class ClientRootWithSerializationProvider : TestTypeProvider
+        {
+            private readonly TypeProvider[] _serializationProviders;
+
+            public ClientRootWithSerializationProvider(string name, params TypeProvider[] serializationProviders)
+                : base(name, TypeSignatureModifiers.Public)
+            {
+                _serializationProviders = serializationProviders;
+            }
+
+            protected internal override bool IsClientProvider => true;
+
+            protected override TypeProvider[] BuildSerializationProviders() => _serializationProviders;
         }
 
         private static CSharpType CreateNamedType(string name, string ns)
