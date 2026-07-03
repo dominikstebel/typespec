@@ -141,7 +141,7 @@ namespace Microsoft.TypeSpec.Generator
             AddProviderBodyDependencyTypes(roots, customCodeView.SignatureDependencyTypes, generatedTypeNames, includeSimpleNameReferences: true, includeUnqualifiedSimpleNameReferences: true);
             if (!publicOnly)
             {
-                AddProviderBodyDependencyTypes(roots, customCodeView.BodyDependencyTypes, generatedTypeNames, includeSimpleNameReferences: true);
+                AddProviderBodyDependencyTypes(roots, customCodeView.BodyDependencyTypes, generatedTypeNames, includeSimpleNameReferences: true, includeUnqualifiedSimpleNameReferences: true);
                 AddAttributes(roots, customCodeView.Attributes, generatedTypeNames, serializationProviderNamesByType: null, includeArguments: true);
                 AddMatchingName(roots, $"{GetCustomCodeViewSimpleName(customCodeView)}Extensions", generatedTypeNames);
             }
