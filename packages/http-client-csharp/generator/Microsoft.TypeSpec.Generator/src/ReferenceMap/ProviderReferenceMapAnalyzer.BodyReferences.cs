@@ -36,7 +36,47 @@ namespace Microsoft.TypeSpec.Generator
                     GetNonEnumStructuredBodyReferenceTypes(provider, graph.Nodes),
                     graph.Nodes);
                 AddProviderBodyDependencyTypes(graph.References[providerName], provider.BodyDependencyTypes, graph.Nodes);
+                AddGeneratedProviderNamespaceBodyDependencyTypes(graph.References[providerName], provider, graph.Nodes);
                 AddProviderInfrastructureReferences(graph.References[providerName], provider, isSerializationProvider, graph.Nodes);
+            }
+        }
+
+        private static void AddGeneratedProviderNamespaceBodyDependencyTypes(HashSet<string> references, TypeProvider provider, HashSet<string> nodes)
+        {
+            var providerNamespace = provider.Type.Namespace;
+            if (string.IsNullOrEmpty(providerNamespace))
+            {
+                return;
+            }
+
+            foreach (var dependency in provider.BodyDependencyTypes)
+            {
+                AddGeneratedProviderNamespaceBodyDependencyType(references, dependency, providerNamespace, nodes);
+            }
+        }
+
+        private static void AddGeneratedProviderNamespaceBodyDependencyType(HashSet<string> references, CSharpType? dependency, string providerNamespace, HashSet<string> nodes)
+        {
+            if (dependency == null)
+            {
+                return;
+            }
+
+            AddNamespaceBodyDependencyName(references, providerNamespace, dependency, nodes);
+            foreach (var argument in dependency.Arguments)
+            {
+                AddGeneratedProviderNamespaceBodyDependencyType(references, argument, providerNamespace, nodes);
+            }
+        }
+
+        private static void AddNamespaceBodyDependencyName(HashSet<string> references, string providerNamespace, CSharpType dependency, HashSet<string> nodes)
+        {
+            var dependencyName = GetSimpleName(GetProviderTypeName(dependency));
+            AddExactMetadataNameMatch(references, $"{providerNamespace}.{dependencyName}", nodes);
+            var aritylessDependencyName = StripGenericArity(dependencyName);
+            if (!string.Equals(aritylessDependencyName, dependencyName, StringComparison.Ordinal))
+            {
+                AddExactMetadataNameMatch(references, $"{providerNamespace}.{aritylessDependencyName}", nodes);
             }
         }
 

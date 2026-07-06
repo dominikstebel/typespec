@@ -92,6 +92,54 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
         }
 
         [Test]
+        public void NamespaceLessCustomCodeGenericBodyDependencyRootsGeneratedTypeInCustomCodeNamespace()
+        {
+            var genericArgument = CreateNamedType("T", string.Empty);
+            var customCodeView = new BodyDependencyTestTypeProvider("CustomType", "Sample", CreateNamedType("ErrorResult", string.Empty, genericArgument));
+            var customType = new CustomizableTestTypeProvider("CustomType", TypeSignatureModifiers.Public, customCodeView, ns: "Sample");
+            var errorResult = new GenericTestTypeProvider("ErrorResult", TypeSignatureModifiers.Internal, "Sample", genericArgument);
+            MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(customType, errorResult));
+            CodeModelGenerator.Instance.AddTypeToKeep(customType.Type.FullyQualifiedName);
+
+            ProviderReferenceMapAnalyzer.Analyze([customType, errorResult]);
+
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(customType));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(errorResult));
+        }
+
+        [Test]
+        public void NamespaceLessGeneratedGenericBodyDependencyRootsGeneratedTypeInProviderNamespace()
+        {
+            var genericArgument = CreateNamedType("T", string.Empty);
+            var provider = new BodyDependencyTestTypeProvider("ClientPipelineExtensions", "Sample", CreateNamedType("ErrorResult", "Microsoft.TypeSpec.Generator.ClientModel.Providers", genericArgument));
+            var errorResult = new GenericTestTypeProvider("ErrorResult", TypeSignatureModifiers.Internal, "Sample", genericArgument);
+            MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(provider, errorResult));
+            CodeModelGenerator.Instance.AddTypeToKeep(provider.Type.FullyQualifiedName);
+
+            ProviderReferenceMapAnalyzer.Analyze([provider, errorResult]);
+
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(provider));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(errorResult));
+        }
+
+        [Test]
+        public void HelperRootBodyDependencyRootsGeneratedGenericDependency()
+        {
+            var genericArgument = CreateNamedType("T", string.Empty);
+            var client = new HelperDependencyTestTypeProvider("SampleClient", "Sample", CreateNamedType("ClientPipelineExtensions", "Microsoft.TypeSpec.Generator.ClientModel.Providers"));
+            var pipelineExtensions = new BodyDependencyTestTypeProvider("ClientPipelineExtensions", "Sample", CreateNamedType("ErrorResult", "Microsoft.TypeSpec.Generator.ClientModel.Providers", genericArgument));
+            var errorResult = new GenericTestTypeProvider("ErrorResult", TypeSignatureModifiers.Internal, "Sample", genericArgument);
+            MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(client, pipelineExtensions, errorResult));
+            CodeModelGenerator.Instance.AddTypeToKeep(client.Type.FullyQualifiedName);
+
+            ProviderReferenceMapAnalyzer.Analyze([client, pipelineExtensions, errorResult]);
+
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(client));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(pipelineExtensions));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(errorResult));
+        }
+
+        [Test]
         public void NamespaceLessCustomCodeBodyDependencyDoesNotRootGeneratedTypeInDifferentNamespace()
         {
             var customCodeView = new BodyDependencyTestTypeProvider("CustomType", "Sample", CreateNamedType("ReferencedModel", string.Empty));
@@ -496,6 +544,19 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             protected internal override IReadOnlyList<CSharpType> BuildBodyDependencyTypes() => _bodyDependencyTypes;
         }
 
+        private sealed class HelperDependencyTestTypeProvider : TestTypeProvider
+        {
+            private readonly CSharpType[] _helperDependencyTypes;
+
+            public HelperDependencyTestTypeProvider(string name, string? ns, params CSharpType[] helperDependencyTypes)
+                : base(name, TypeSignatureModifiers.Public, ns: ns)
+            {
+                _helperDependencyTypes = helperDependencyTypes;
+            }
+
+            protected internal override IReadOnlyList<CSharpType> BuildHelperDependencyTypes() => _helperDependencyTypes;
+        }
+
         private sealed class SignatureDependencyTestTypeProvider : TestTypeProvider
         {
             private readonly CSharpType[] _signatureDependencyTypes;
@@ -567,6 +628,19 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             }
 
             protected override TypeProvider? BuildDeclaringTypeProvider() => _declaringTypeProvider;
+        }
+
+        private sealed class GenericTestTypeProvider : TestTypeProvider
+        {
+            private readonly CSharpType[] _typeArguments;
+
+            public GenericTestTypeProvider(string name, TypeSignatureModifiers declarationModifiers, string ns, params CSharpType[] typeArguments)
+                : base(name, declarationModifiers, ns: ns)
+            {
+                _typeArguments = typeArguments;
+            }
+
+            protected override CSharpType[] GetTypeArguments() => _typeArguments;
         }
 
         private sealed class ClientProvider : TestTypeProvider

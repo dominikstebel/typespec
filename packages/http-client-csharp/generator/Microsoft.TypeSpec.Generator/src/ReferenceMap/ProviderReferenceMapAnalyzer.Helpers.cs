@@ -148,7 +148,7 @@ namespace Microsoft.TypeSpec.Generator
                     continue;
                 }
 
-                AddHelperDependencies(roots, provider.HelperDependencyTypes, nodes, references == null ? null : references[providerName]);
+                AddHelperDependencies(roots, provider.HelperDependencyTypes, nodes, references == null ? null : references[providerName], provider.Type.Namespace);
                 if (references != null)
                 {
                     AddReferencedHelperRoots(roots, references[providerName], generatedHelperNames!);
@@ -266,25 +266,32 @@ namespace Microsoft.TypeSpec.Generator
             HashSet<string> roots,
             IReadOnlyList<CSharpType> dependencies,
             HashSet<string> nodes,
-            HashSet<string>? referencedNames)
+            HashSet<string>? referencedNames,
+            string? providerNamespace)
         {
             foreach (var dependency in dependencies)
             {
-                if (referencedNames == null)
-                {
-                    AddTypeReference(roots, dependency, nodes);
-                    continue;
-                }
-
                 var matches = new HashSet<string>(StringComparer.Ordinal);
                 AddTypeReference(matches, dependency, nodes);
+                AddProviderNamespaceDependencyMatches(matches, dependency, providerNamespace, nodes);
                 foreach (var match in matches)
                 {
-                    if (referencedNames.Contains(match))
-                    {
-                        roots.Add(match);
-                    }
+                    roots.Add(match);
                 }
+            }
+        }
+
+        private static void AddProviderNamespaceDependencyMatches(HashSet<string> matches, CSharpType? dependency, string? providerNamespace, HashSet<string> nodes)
+        {
+            if (dependency == null || string.IsNullOrEmpty(providerNamespace))
+            {
+                return;
+            }
+
+            AddNamespaceBodyDependencyName(matches, providerNamespace, dependency, nodes);
+            foreach (var argument in dependency.Arguments)
+            {
+                AddProviderNamespaceDependencyMatches(matches, argument, providerNamespace, nodes);
             }
         }
 
