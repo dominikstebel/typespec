@@ -494,11 +494,6 @@ namespace Microsoft.TypeSpec.Generator
         public virtual CSharpType DictionaryInitializationType => ChangeTrackingDictionaryProvider.Type;
 
         /// <summary>
-        /// The type used to represent optional values in generated helper code.
-        /// </summary>
-        public virtual CSharpType OptionalType => OptionalProvider.Type;
-
-        /// <summary>
         /// Returns the serialization type providers for the given model type provider.
         /// </summary>
         /// <param name="inputType">The input model.</param>
