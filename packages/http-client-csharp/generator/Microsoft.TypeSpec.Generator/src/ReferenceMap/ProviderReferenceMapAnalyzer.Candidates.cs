@@ -73,7 +73,9 @@ namespace Microsoft.TypeSpec.Generator
             HashSet<string> internalizeDeclaredNodes,
             HashSet<string> publicizeReachable,
             HashSet<string> customInternalDeclarations,
+            HashSet<string> generatedInternalDeclarations,
             HashSet<string> customInternalBoundaryNodes,
+            HashSet<string> customPublicRoots,
             HashSet<string> publicizeRoots,
             HashSet<string> nodes,
             IReadOnlyDictionary<string, HashSet<string>> references)
@@ -84,10 +86,12 @@ namespace Microsoft.TypeSpec.Generator
                 var isNonRootKept = IsKeptName(node, CodeModelGenerator.Instance.NonRootTypes, nodes);
                 if (!publicizeReachable.Contains(node) ||
                     customInternalDeclarations.Contains(node) ||
+                    generatedInternalDeclarations.Contains(node) && !customPublicRoots.Contains(node) ||
                     customInternalBoundaryNodes.Contains(node) && (!publicizeRoots.Contains(node) || isNonRootKept) ||
                     isNonRootKept &&
                         references.TryGetValue(node, out var nodeReferences) &&
-                        nodeReferences.Overlaps(customInternalDeclarations))
+                        (nodeReferences.Overlaps(customInternalDeclarations) ||
+                            nodeReferences.Overlaps(generatedInternalDeclarations)))
                 {
                     candidates.Add(node);
                 }
@@ -118,8 +122,84 @@ namespace Microsoft.TypeSpec.Generator
             // Non-root keep entries preserve the declared type/file, but deliberately do not
             // root their dependencies. They can still be internalized when needed to avoid
             // exposing custom/internal types through a public surface.
-            RemoveKeptNonRootNames(candidates, nodes, references, customInternalDeclarations, customInternalBoundaryNodes);
+            RemoveKeptNonRootNames(candidates, nodes, references, customInternalDeclarations, generatedInternalDeclarations, customInternalBoundaryNodes);
             return candidates;
+        }
+
+        private static void AddNestedInternalizeCandidates(
+            IReadOnlyList<TypeProvider> generatedProviders,
+            HashSet<string> candidates,
+            HashSet<string> nodes)
+        {
+            var addedCandidate = true;
+            while (addedCandidate)
+            {
+                addedCandidate = false;
+                foreach (var provider in generatedProviders)
+                {
+                    var declaringType = provider.DeclaringTypeProvider?.Type;
+                    if (declaringType == null ||
+                        !candidates.Contains(GetProviderTypeName(declaringType)))
+                    {
+                        continue;
+                    }
+
+                    var providerName = GetProviderTypeName(provider.Type);
+                    if (nodes.Contains(providerName) && candidates.Add(providerName))
+                    {
+                        addedCandidate = true;
+                    }
+                }
+            }
+        }
+
+        private static void AddInternalOnlyDependencyCandidates(
+            HashSet<string> internalizeDeclaredNodes,
+            HashSet<string> candidates,
+            HashSet<string> customInternalDeclarations,
+            HashSet<string> generatedInternalDeclarations,
+            HashSet<string> explicitPublicRoots,
+            IReadOnlyDictionary<string, HashSet<string>> references,
+            HashSet<string> generatedImplementationInternalDeclarations)
+        {
+            var addedCandidate = true;
+            while (addedCandidate)
+            {
+                addedCandidate = false;
+                foreach (var node in internalizeDeclaredNodes)
+                {
+                    if (candidates.Contains(node) || explicitPublicRoots.Contains(node))
+                    {
+                        continue;
+                    }
+
+                    var hasPredecessor = false;
+                    var allPredecessorsInternalized = true;
+                    foreach (var (owner, children) in references)
+                    {
+                        if (string.Equals(owner, node, StringComparison.Ordinal) ||
+                            generatedImplementationInternalDeclarations.Contains(owner) ||
+                            !children.Contains(node))
+                        {
+                            continue;
+                        }
+
+                        hasPredecessor = true;
+                        if (!candidates.Contains(owner) &&
+                            !customInternalDeclarations.Contains(owner) &&
+                            !generatedInternalDeclarations.Contains(owner))
+                        {
+                            allPredecessorsInternalized = false;
+                            break;
+                        }
+                    }
+
+                    if (hasPredecessor && allPredecessorsInternalized && candidates.Add(node))
+                    {
+                        addedCandidate = true;
+                    }
+                }
+            }
         }
 
         private static HashSet<string> GetPublicizeCandidates(
@@ -224,12 +304,14 @@ namespace Microsoft.TypeSpec.Generator
             HashSet<string> nodes,
             IReadOnlyDictionary<string, HashSet<string>> references,
             HashSet<string> customInternalDeclarations,
+            HashSet<string> generatedInternalDeclarations,
             HashSet<string> customInternalBoundaryNodes)
         {
             var nonRootTypes = CodeModelGenerator.Instance.NonRootTypes;
             foreach (var node in nodes)
             {
                 if (customInternalDeclarations.Contains(node) ||
+                    generatedInternalDeclarations.Contains(node) ||
                     customInternalBoundaryNodes.Contains(node))
                 {
                     continue;

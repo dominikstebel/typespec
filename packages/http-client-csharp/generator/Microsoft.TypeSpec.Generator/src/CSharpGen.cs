@@ -218,7 +218,7 @@ namespace Microsoft.TypeSpec.Generator
             var fileNamesToKeep = filesToKeep.ToHashSet(StringComparer.Ordinal);
             foreach (var file in directoryInfo.GetFiles("*", SearchOption.AllDirectories))
             {
-                if (!fileNamesToKeep.Contains(file.Name))
+                if (!ShouldKeepGeneratedFile(file, fileNamesToKeep))
                 {
                     file.Delete();
                 }
@@ -242,5 +242,10 @@ namespace Microsoft.TypeSpec.Generator
                 directoryInfo.Delete();
             }
         }
+
+        private static bool ShouldKeepGeneratedFile(FileInfo file, HashSet<string> fileNamesToKeep)
+            => fileNamesToKeep.Contains(file.Name) ||
+                file.Extension.Equals(".cs", StringComparison.Ordinal) &&
+                file.Name.EndsWith("Extensions.cs", StringComparison.Ordinal);
     }
 }

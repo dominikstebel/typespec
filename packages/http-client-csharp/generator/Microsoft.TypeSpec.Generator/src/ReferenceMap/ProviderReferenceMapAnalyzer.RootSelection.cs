@@ -121,13 +121,26 @@ namespace Microsoft.TypeSpec.Generator
             var modelFactory = CodeModelGenerator.Instance.OutputLibrary.ModelFactory.Value;
             _preWriteModelFactory = modelFactory;
             _preWriteModelFactoryMethods ??= [.. modelFactory.Methods];
+            var removedLeadingMethod = false;
             var methodsToKeep = new List<MethodProvider>();
-            foreach (var method in modelFactory.Methods)
+            for (int i = 0; i < modelFactory.Methods.Count; i++)
             {
+                var method = modelFactory.Methods[i];
                 if (!namesToRemove.Contains(method.Signature.Name))
                 {
                     methodsToKeep.Add(method);
+                    continue;
                 }
+
+                if (i == 0)
+                {
+                    removedLeadingMethod = true;
+                }
+            }
+
+            if (removedLeadingMethod && methodsToKeep.Count > 0)
+            {
+                modelFactory.PreserveLeadingMethodSeparatorForBackCompat();
             }
 
             modelFactory.Update(methods: methodsToKeep);

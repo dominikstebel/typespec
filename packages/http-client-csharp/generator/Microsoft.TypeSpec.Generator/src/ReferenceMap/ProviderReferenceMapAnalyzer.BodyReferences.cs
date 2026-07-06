@@ -31,7 +31,6 @@ namespace Microsoft.TypeSpec.Generator
                     continue;
                 }
 
-                AddHelperDependencies(graph.References[providerName], provider.HelperDependencyTypes, graph.Nodes, referencedNames: null);
                 AddProviderBodyDependencyTypes(
                     graph.References[providerName],
                     GetNonEnumStructuredBodyReferenceTypes(provider, graph.Nodes),
@@ -109,7 +108,14 @@ namespace Microsoft.TypeSpec.Generator
                 return;
             }
 
-            AddMatchingName(references, $"{type.Name}Extensions", nodes);
+            if (string.IsNullOrEmpty(type.Namespace))
+            {
+                AddMatchingName(references, $"{type.Name}Extensions", nodes);
+            }
+            else
+            {
+                AddExactMetadataNameMatch(references, $"{type.Namespace}.{type.Name}Extensions", nodes);
+            }
             foreach (var argument in type.Arguments)
             {
                 AddSerializationExtensionReferences(references, argument, nodes);
@@ -314,11 +320,12 @@ namespace Microsoft.TypeSpec.Generator
             IReadOnlyList<CSharpType> dependencies,
             HashSet<string> nodes,
             bool includeSimpleNameReferences = false,
-            bool includeUnqualifiedSimpleNameReferences = false)
+            bool includeUnqualifiedSimpleNameReferences = false,
+            bool includeExtensionReferences = true)
         {
             foreach (var dependency in dependencies)
             {
-                AddProviderBodyDependencyType(references, dependency, nodes, includeSimpleNameReferences, includeUnqualifiedSimpleNameReferences);
+                AddProviderBodyDependencyType(references, dependency, nodes, includeSimpleNameReferences, includeUnqualifiedSimpleNameReferences, includeExtensionReferences);
             }
         }
 
@@ -327,7 +334,8 @@ namespace Microsoft.TypeSpec.Generator
             CSharpType? dependency,
             HashSet<string> nodes,
             bool includeSimpleNameReferences,
-            bool includeUnqualifiedSimpleNameReferences)
+            bool includeUnqualifiedSimpleNameReferences,
+            bool includeExtensionReferences)
         {
             if (dependency == null)
             {
@@ -335,19 +343,33 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             AddTypeReference(references, dependency, nodes);
-            if (includeSimpleNameReferences && !string.IsNullOrEmpty(dependency.Namespace))
+            if (includeSimpleNameReferences &&
+                !string.IsNullOrEmpty(dependency.Namespace) &&
+                dependency.Arguments.Count == 0)
             {
                 AddMatchingName(references, dependency.Name, nodes);
             }
-            else if (includeUnqualifiedSimpleNameReferences && string.IsNullOrEmpty(dependency.Namespace))
+            else if (includeUnqualifiedSimpleNameReferences &&
+                string.IsNullOrEmpty(dependency.Namespace) &&
+                dependency.Arguments.Count == 0)
             {
                 AddUnambiguousMatchingName(references, dependency.Name, nodes);
             }
-            AddMatchingName(references, $"{dependency.Name}Extensions", nodes);
+            if (includeExtensionReferences)
+            {
+                if (string.IsNullOrEmpty(dependency.Namespace))
+                {
+                    AddMatchingName(references, $"{dependency.Name}Extensions", nodes);
+                }
+                else
+                {
+                    AddExactMetadataNameMatch(references, $"{dependency.Namespace}.{dependency.Name}Extensions", nodes);
+                }
+            }
 
             foreach (var argument in dependency.Arguments)
             {
-                AddProviderBodyDependencyType(references, argument, nodes, includeSimpleNameReferences, includeUnqualifiedSimpleNameReferences);
+                AddProviderBodyDependencyType(references, argument, nodes, includeSimpleNameReferences, includeUnqualifiedSimpleNameReferences, includeExtensionReferences);
             }
         }
 

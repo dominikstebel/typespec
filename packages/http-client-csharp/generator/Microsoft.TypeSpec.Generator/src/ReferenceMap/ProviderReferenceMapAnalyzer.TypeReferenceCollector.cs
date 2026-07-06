@@ -160,6 +160,11 @@ namespace Microsoft.TypeSpec.Generator
             var name = type.Arguments.Count > 0 && !type.Name.Contains('`', StringComparison.Ordinal)
                 ? $"{type.Name}`{type.Arguments.Count}"
                 : type.Name;
+            if (type.DeclaringType is { } declaringType)
+            {
+                return $"{GetProviderTypeName(declaringType)}.{name}";
+            }
+
             return string.IsNullOrEmpty(type.Namespace) ? name : $"{type.Namespace}.{name}";
         }
 

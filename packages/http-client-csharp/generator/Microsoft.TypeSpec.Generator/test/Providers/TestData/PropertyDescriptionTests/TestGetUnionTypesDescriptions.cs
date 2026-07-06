@@ -1,7 +1,7 @@
 /// <test>
-/// <description> <c>bool</c>. </description>
-/// <description> <c>int</c>. </description>
-/// <description> <c>global::System.Collections.Generic.IDictionary{string,int}</c>. </description>
+/// <description> <see cref="bool"/>. </description>
+/// <description> <see cref="int"/>. </description>
+/// <description> <see cref="global::System.Collections.Generic.IDictionary{TKey,TValue}"/> where <c>TKey</c> is of type <see cref="string"/>, where <c>TValue</c> is of type <see cref="int"/>. </description>
 /// <description> 21. </description>
 /// <description> "test". </description>
 /// <description> True. </description>

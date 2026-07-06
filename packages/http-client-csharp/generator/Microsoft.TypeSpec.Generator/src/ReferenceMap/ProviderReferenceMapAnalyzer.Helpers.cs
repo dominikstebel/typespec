@@ -93,6 +93,44 @@ namespace Microsoft.TypeSpec.Generator
         private static bool IsModelFactoryProvider(TypeProvider provider)
             => provider is ModelFactoryProvider;
 
+        private static IEnumerable<string> GetExistingGeneratedHelperRoots(
+            IReadOnlyList<TypeProvider> generatedProviders,
+            HashSet<string> generatedInternalDeclarations)
+        {
+            var helperNames = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var provider in GetGeneratedProviders(generatedProviders))
+            {
+                if (!IsGeneratedInternalHelperDeclaration(provider))
+                {
+                    continue;
+                }
+
+                var name = GetProviderTypeName(provider.Type);
+                if (generatedInternalDeclarations.Contains(name))
+                {
+                    helperNames.Add(name);
+                }
+            }
+
+            AddSiblingExtensionRoot(helperNames, generatedInternalDeclarations, "CancellationTokenExtensions", "RequestContextExtensions");
+
+            return helperNames;
+        }
+
+        private static bool IsGeneratedInternalHelperDeclaration(TypeProvider provider)
+        {
+            if (provider is ModelProvider ||
+                provider is EnumProvider ||
+                IsModelFactoryProvider(provider) ||
+                provider.DeclaringTypeProvider != null ||
+                provider.SerializationProviders.Count > 0)
+            {
+                return false;
+            }
+
+            return !string.Equals(provider.RelativeFilePath, Path.Combine("src", "Generated", "Models", $"{provider.Name}.cs"), StringComparison.Ordinal);
+        }
+
         private static HashSet<string> GetHelperRootNames(
             IReadOnlyList<TypeProvider> providers,
             HashSet<string> nodes,
@@ -150,7 +188,34 @@ namespace Microsoft.TypeSpec.Generator
                 }
             }
 
+            AddSiblingExtensionRoot(roots, nodes, "CancellationTokenExtensions", "RequestContextExtensions");
             return roots;
+        }
+
+        private static void AddSiblingExtensionRoot(HashSet<string> roots, HashSet<string> nodes, string sourceName, string siblingName)
+        {
+            var siblingRoots = new List<string>();
+            foreach (var root in roots)
+            {
+                if (!string.Equals(GetSimpleName(root), sourceName, StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                var namespaceName = GetNamespaceName(root);
+                if (namespaceName == null)
+                {
+                    continue;
+                }
+
+                var sibling = $"{namespaceName}.{siblingName}";
+                if (nodes.Contains(sibling))
+                {
+                    siblingRoots.Add(sibling);
+                }
+            }
+
+            roots.UnionWith(siblingRoots);
         }
 
         private static void AddParameterValidationHelperRoot(HashSet<string> roots, ParameterProvider parameter, HashSet<string> nodes)
@@ -448,6 +513,11 @@ namespace Microsoft.TypeSpec.Generator
             var lookup = new Dictionary<string, List<string>>(StringComparer.Ordinal);
             foreach (var node in nodes)
             {
+                if (IsNestedNode(node, nodes))
+                {
+                    continue;
+                }
+
                 var simpleName = StripGenericArity(GetSimpleName(node));
                 if (!lookup.TryGetValue(simpleName, out var matchingNodes))
                 {
@@ -465,6 +535,22 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             return result;
+        }
+
+        private static bool IsNestedNode(string node, HashSet<string> nodes)
+        {
+            var dotIndex = node.IndexOf('.');
+            while (dotIndex >= 0)
+            {
+                if (nodes.Contains(node.Substring(0, dotIndex)))
+                {
+                    return true;
+                }
+
+                dotIndex = node.IndexOf('.', dotIndex + 1);
+            }
+
+            return false;
         }
 
         private static HashSet<string> GetReachableTypes(HashSet<string> roots, IReadOnlyDictionary<string, HashSet<string>> references)

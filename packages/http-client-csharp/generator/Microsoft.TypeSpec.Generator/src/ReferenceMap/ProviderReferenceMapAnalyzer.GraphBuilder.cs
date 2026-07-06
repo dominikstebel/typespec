@@ -36,6 +36,11 @@ namespace Microsoft.TypeSpec.Generator
                 AddTypeReference(references[current], provider.BaseType, nodes, serializationReferenceNamesByType);
                 AddTypeReference(references[current], provider.DeclaringTypeProvider?.Type, nodes, serializationReferenceNamesByType);
 
+                if (publicOnly && !provider.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public))
+                {
+                    continue;
+                }
+
                 if (!publicOnly && IsKept(provider.Type, CodeModelGenerator.Instance.NonRootTypes, nodes))
                 {
                     continue;

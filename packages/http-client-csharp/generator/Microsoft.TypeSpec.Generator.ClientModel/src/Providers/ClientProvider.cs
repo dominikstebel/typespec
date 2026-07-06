@@ -454,52 +454,12 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                     dependencies.Add(method.CollectionDefinition.Type);
                 }
 
-                if (method.ServiceMethod == null)
-                {
-                    continue;
-                }
-
-                AddInputTypeDependency(dependencies, method.ServiceMethod.Response.Type);
-                AddInputTypeDependency(dependencies, method.ServiceMethod.Exception?.Type);
-                foreach (var parameter in method.ServiceMethod.Parameters)
-                {
-                    if (IsContentTypeParameter(parameter))
-                    {
-                        continue;
-                    }
-
-                    AddInputTypeDependency(dependencies, parameter.Type);
-                }
-
-                foreach (var parameter in method.ServiceMethod.Operation.Parameters)
-                {
-                    if (IsContentTypeParameter(parameter))
-                    {
-                        continue;
-                    }
-
-                    AddInputTypeDependency(dependencies, parameter.Type);
-                }
-
-                // Operation responses are input metadata. The generated method signature and body
-                // dependencies above capture the response types that are actually used.
+                // Service method metadata can mention wire-only request/response models that are not
+                // emitted in the generated method signature or body. The graph builder and structured
+                // body scanner capture the generated types that are actually referenced.
             }
 
             return dependencies;
-        }
-
-        private static bool IsContentTypeParameter(InputParameter parameter) =>
-            parameter is InputHeaderParameter { IsContentType: true } ||
-                parameter is InputMethodParameter { Location: InputRequestLocation.Header } &&
-                string.Equals(parameter.SerializedName, "Content-Type", StringComparison.OrdinalIgnoreCase);
-
-        private static void AddInputTypeDependency(List<CSharpType> dependencies, InputType? inputType)
-        {
-            var type = inputType == null ? null : ScmCodeModelGenerator.Instance.TypeFactory.CreateCSharpType(inputType);
-            if (type != null)
-            {
-                dependencies.Add(type);
-            }
         }
 
         protected override FieldProvider[] BuildFields()

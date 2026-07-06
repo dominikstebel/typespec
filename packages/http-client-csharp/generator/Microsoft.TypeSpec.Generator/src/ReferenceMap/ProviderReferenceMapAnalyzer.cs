@@ -52,7 +52,10 @@ namespace Microsoft.TypeSpec.Generator
                 var providerName = GetProviderTypeName(provider.Type);
                 if (internalizeCandidates.Contains(providerName))
                 {
-                    provider.PreserveXmlDocs();
+                    if (provider.DeclaringTypeProvider is null)
+                    {
+                        provider.PreserveXmlDocs();
+                    }
                     provider.Update(modifiers: MakeInternal(provider.DeclarationModifiers));
                 }
                 else if (publicizeCandidates.Contains(providerName) && !IsGeneratedInternalImplementation(provider))
@@ -97,6 +100,7 @@ namespace Microsoft.TypeSpec.Generator
             customRemovalRoots.UnionWith(generatedPublicDeclarations);
             var customInternalDeclarations = GetCustomCodeInternalGeneratedTypeDeclarations(generatedProviders, graph.Nodes);
             var generatedInternalDeclarations = GetGeneratedInternalTypeDeclarations(generatedProviders, graph.Nodes);
+            customRemovalRoots.UnionWith(GetExistingGeneratedHelperRoots(generatedProviders, generatedInternalDeclarations));
 
             // Helper types are rooted after an initial reachability pass so unused infrastructure
             // such as change-tracking dictionaries can still be removed when no reachable type needs them.
@@ -190,7 +194,7 @@ namespace Microsoft.TypeSpec.Generator
             internalizeReachableWithoutHelpers = GetReachableTypes(internalizeRoots, internalizeReferences);
             var publicizeRoots = new HashSet<string>(internalizeRoots, StringComparer.Ordinal);
             var publicApiReferences = CloneReferences(publicGraph.References);
-            var internalizeHelperRoots = GetHelperRootNames(generatedProviders, graph.Nodes, internalizeReachableWithoutHelpers);
+            var internalizeHelperRoots = GetHelperRootNames(generatedProviders, graph.Nodes, internalizeReachableWithoutHelpers, graph.References);
             internalizeRoots.UnionWith(internalizeHelperRoots);
             var internalizeDeclaredNodes = GetPostProcessorDeclaredNodes(generatedProviders, graph.Nodes, publicOnly: true);
             var customInternalBoundaryNodes = GetCustomInternalBoundaryNodes(publicGraph, customInternalDeclarations);
@@ -206,10 +210,24 @@ namespace Microsoft.TypeSpec.Generator
                 internalizeDeclaredNodes,
                 publicizeReachable,
                 customInternalDeclarations,
+                generatedInternalDeclarations,
                 customInternalBoundaryNodes,
+                customPublicRoots,
                 publicizeRoots,
                 graph.Nodes,
                 internalizeReferences);
+            AddNestedInternalizeCandidates(generatedProviders, internalizeCandidates, graph.Nodes);
+            AddInternalOnlyDependencyCandidates(
+                internalizeDeclaredNodes,
+                internalizeCandidates,
+                customInternalDeclarations,
+                generatedInternalDeclarations,
+                customPublicRoots,
+                internalizeReferences,
+                generatedImplementationInternalDeclarations);
+            AddNestedInternalizeCandidates(generatedProviders, internalizeCandidates, graph.Nodes);
+            publicizeRoots.ExceptWith(internalizeCandidates);
+            publicizeReachable = GetReachableTypes(publicizeRoots, internalizeReferences, publicApiTraversalNodes);
             var publicizeRootExclusions = GetRootNames(
                 providers,
                 graph.Nodes,
