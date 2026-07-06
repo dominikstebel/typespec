@@ -778,11 +778,11 @@ namespace Microsoft.TypeSpec.Generator.Providers
                 }
                 if (newConstructors != null)
                 {
-                    newConstructors = VisitNewMembers(newConstructors, Constructors, static (member, visitor) => visitor.VisitConstructorProvider(member));
+                    newConstructors = VisitNewMembers(newConstructors, Constructors, static (member, visitor) => visitor.VisitConstructor(member));
                 }
                 if (newFields != null)
                 {
-                    newFields = VisitNewMembers(newFields, Fields, static (member, visitor) => visitor.VisitFieldProvider(member));
+                    newFields = VisitNewMembers(newFields, Fields, static (member, visitor) => visitor.VisitField(member));
                 }
 
                 Update(fields: newFields, methods: newMethods, constructors: newConstructors);

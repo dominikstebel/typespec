@@ -12,15 +12,14 @@ import {
   typeSpecCompile,
 } from "./utils/test-util.js";
 
-vi.mock("child_process", () => ({
-  spawn: vi.fn(),
-}));
-
 describe("execCSharpGenerator tests", () => {
   let spawnMock: any;
   let sdkContext: CSharpEmitterContext;
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+    vi.mock("child_process", () => ({
+      spawn: vi.fn(),
+    }));
     const runner = await createEmitterTestHost();
     const program = await typeSpecCompile(``, runner);
     const context = createEmitterContext(program);

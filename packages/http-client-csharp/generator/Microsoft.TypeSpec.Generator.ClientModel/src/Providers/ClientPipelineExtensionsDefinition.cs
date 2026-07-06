@@ -53,9 +53,6 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             ];
         }
 
-        protected override IReadOnlyList<CSharpType> BuildBodyDependencyTypes()
-            => [ErrorResultSnippets.ErrorResultType];
-
         private MethodProvider ProcessHeadAsBoolMessage()
         {
             MethodSignature signature = GetProcessHeadAsBoolMessageSignature(false);
