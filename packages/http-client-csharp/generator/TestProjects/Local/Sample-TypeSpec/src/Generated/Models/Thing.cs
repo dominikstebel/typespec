@@ -100,13 +100,13 @@ namespace SampleTypeSpec
         /// Supported types:
         /// <list type="bullet">
         /// <item>
-        /// <description> <c>string</c>. </description>
+        /// <description> <see cref="string"/>. </description>
         /// </item>
         /// <item>
-        /// <description> <c>global::System.Collections.Generic.IList{string}</c>. </description>
+        /// <description> <see cref="IList{T}"/> where <c>T</c> is of type <see cref="string"/>. </description>
         /// </item>
         /// <item>
-        /// <description> <c>int</c>. </description>
+        /// <description> <see cref="int"/>. </description>
         /// </item>
         /// </list>
         /// </remarks>
