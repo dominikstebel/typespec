@@ -276,7 +276,7 @@ namespace Microsoft.TypeSpec.Generator
             removeReachableWithoutHelpers = GetReachableTypes(removeRoots, graph.References);
             AddBasePreservedReferences(generatedProviders, graph.Nodes, graph.References, removeReachableWithoutHelpers);
 
-            var removeHelperRoots = GetHelperRootNames(generatedProviders, graph.Nodes, removeReachableWithoutHelpers, graph.References);
+            var removeHelperRoots = GetHelperRootNames(generatedProviders, graph.Nodes, removeReachableWithoutHelpers, graph.References, includeModelSerializationProviders: true);
             removeRoots.UnionWith(removeHelperRoots);
 
             var removeReachable = GetReachableTypes(removeRoots, graph.References);

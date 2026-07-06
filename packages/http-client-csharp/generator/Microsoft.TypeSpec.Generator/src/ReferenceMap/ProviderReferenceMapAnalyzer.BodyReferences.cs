@@ -430,16 +430,25 @@ namespace Microsoft.TypeSpec.Generator
 
         private static bool IsGeneratedBodyReferenceCandidate(TypeProvider provider, bool isSerializationProvider)
         {
-            if (provider.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Static))
+            return IsGeneratedImplementationBodyReferenceCandidate(provider, isSerializationProvider) ||
+                provider.HelperDependencyTypes.Count > 0 ||
+                provider.BodyDependencyTypes.Count > 0;
+        }
+
+        private static bool IsGeneratedImplementationBodyReferenceCandidate(TypeProvider provider, bool isSerializationProvider)
+        {
+            if (provider.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Static) ||
+                IsClientProvider(provider) ||
+                isSerializationProvider)
             {
                 return true;
             }
 
-            return IsClientProvider(provider) ||
-                isSerializationProvider ||
-                IsGeneratedInternalHelperDeclaration(provider) ||
-                provider.HelperDependencyTypes.Count > 0 ||
-                provider.BodyDependencyTypes.Count > 0;
+            return provider is not ModelProvider &&
+                provider is not EnumProvider &&
+                !IsModelFactoryProvider(provider) &&
+                provider.DeclaringTypeProvider == null &&
+                provider.SerializationProviders.Count == 0;
         }
     }
 }

@@ -109,6 +109,29 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             return dependencies;
         }
 
+        protected override IReadOnlyList<CSharpType> BuildBodyDependencyTypes()
+        {
+            var dependencies = new List<CSharpType>();
+            foreach (var serviceMethod in _inputClient.Methods)
+            {
+                foreach (var parameter in serviceMethod.Operation.Parameters)
+                {
+                    if (parameter is not InputBodyParameter && parameter is not InputMethodParameter { Location: InputRequestLocation.Body })
+                    {
+                        continue;
+                    }
+
+                    var type = ScmCodeModelGenerator.Instance.TypeFactory.CreateCSharpType(parameter.Type);
+                    if (type != null)
+                    {
+                        AddDependency(dependencies, type);
+                    }
+                }
+            }
+
+            return dependencies;
+        }
+
         private static void AddDependency(List<CSharpType> dependencies, CSharpType dependency)
         {
             if (!dependencies.Any(existing =>

@@ -123,7 +123,8 @@ namespace Microsoft.TypeSpec.Generator
                 provider is EnumProvider ||
                 IsModelFactoryProvider(provider) ||
                 provider.DeclaringTypeProvider != null ||
-                provider.SerializationProviders.Count > 0)
+                provider.SerializationProviders.Count > 0 ||
+                IsModelSerializationProviderDeclaration(provider))
             {
                 return false;
             }
@@ -131,14 +132,23 @@ namespace Microsoft.TypeSpec.Generator
             return !string.Equals(provider.RelativeFilePath, Path.Combine("src", "Generated", "Models", $"{provider.Name}.cs"), StringComparison.Ordinal);
         }
 
+        private static bool IsModelSerializationProviderDeclaration(TypeProvider provider)
+        {
+            var modelsDirectory = Path.Combine("src", "Generated", "Models");
+            var relativeFilePath = provider.RelativeFilePath;
+            return relativeFilePath.StartsWith(modelsDirectory + Path.DirectorySeparatorChar, StringComparison.Ordinal) &&
+                Path.GetFileNameWithoutExtension(relativeFilePath).Contains(".Serialization", StringComparison.Ordinal);
+        }
+
         private static HashSet<string> GetHelperRootNames(
             IReadOnlyList<TypeProvider> providers,
             HashSet<string> nodes,
             HashSet<string> reachableTypes,
-            IReadOnlyDictionary<string, HashSet<string>>? references = null)
+            IReadOnlyDictionary<string, HashSet<string>>? references = null,
+            bool includeModelSerializationProviders = false)
         {
             var roots = new HashSet<string>(StringComparer.Ordinal);
-            var generatedHelperNames = references == null ? null : GetGeneratedHelperNames(providers, nodes);
+            var generatedHelperNames = references == null ? null : GetGeneratedHelperNames(providers, nodes, includeModelSerializationProviders);
             foreach (var provider in GetGeneratedProviders(providers))
             {
                 var providerName = GetProviderTypeName(provider.Type);
@@ -197,12 +207,13 @@ namespace Microsoft.TypeSpec.Generator
             return roots;
         }
 
-        private static HashSet<string> GetGeneratedHelperNames(IReadOnlyList<TypeProvider> providers, HashSet<string> nodes)
+        private static HashSet<string> GetGeneratedHelperNames(IReadOnlyList<TypeProvider> providers, HashSet<string> nodes, bool includeModelSerializationProviders)
         {
             var helpers = new HashSet<string>(StringComparer.Ordinal);
             foreach (var provider in GetGeneratedProviders(providers))
             {
-                if (!IsGeneratedInternalHelperDeclaration(provider))
+                if (!IsGeneratedInternalHelperDeclaration(provider) &&
+                    (!includeModelSerializationProviders || !IsModelSerializationProviderDeclaration(provider)))
                 {
                     continue;
                 }
