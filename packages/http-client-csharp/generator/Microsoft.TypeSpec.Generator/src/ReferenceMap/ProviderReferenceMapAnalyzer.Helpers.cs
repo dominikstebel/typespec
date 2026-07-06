@@ -138,6 +138,7 @@ namespace Microsoft.TypeSpec.Generator
             IReadOnlyDictionary<string, HashSet<string>>? references = null)
         {
             var roots = new HashSet<string>(StringComparer.Ordinal);
+            var generatedHelperNames = references == null ? null : GetGeneratedHelperNames(providers, nodes);
             foreach (var provider in GetGeneratedProviders(providers))
             {
                 var providerName = GetProviderTypeName(provider.Type);
@@ -148,6 +149,10 @@ namespace Microsoft.TypeSpec.Generator
                 }
 
                 AddHelperDependencies(roots, provider.HelperDependencyTypes, nodes, references == null ? null : references[providerName]);
+                if (references != null)
+                {
+                    AddReferencedHelperRoots(roots, references[providerName], generatedHelperNames!);
+                }
 
                 foreach (var property in provider.Properties)
                 {
@@ -190,6 +195,37 @@ namespace Microsoft.TypeSpec.Generator
 
             AddSiblingExtensionRoot(roots, nodes, "CancellationTokenExtensions", "RequestContextExtensions");
             return roots;
+        }
+
+        private static HashSet<string> GetGeneratedHelperNames(IReadOnlyList<TypeProvider> providers, HashSet<string> nodes)
+        {
+            var helpers = new HashSet<string>(StringComparer.Ordinal);
+            foreach (var provider in GetGeneratedProviders(providers))
+            {
+                if (!IsGeneratedInternalHelperDeclaration(provider))
+                {
+                    continue;
+                }
+
+                var providerName = GetProviderTypeName(provider.Type);
+                if (nodes.Contains(providerName))
+                {
+                    helpers.Add(providerName);
+                }
+            }
+
+            return helpers;
+        }
+
+        private static void AddReferencedHelperRoots(HashSet<string> roots, HashSet<string> referencedNames, HashSet<string> generatedHelperNames)
+        {
+            foreach (var referencedName in referencedNames)
+            {
+                if (generatedHelperNames.Contains(referencedName))
+                {
+                    roots.Add(referencedName);
+                }
+            }
         }
 
         private static void AddSiblingExtensionRoot(HashSet<string> roots, HashSet<string> nodes, string sourceName, string siblingName)
