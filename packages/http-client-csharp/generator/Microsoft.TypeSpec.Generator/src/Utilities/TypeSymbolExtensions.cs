@@ -157,11 +157,16 @@ namespace Microsoft.TypeSpec.Generator
                         return GetNonNullableGenericTypeName(namedTypeSymbol);
                     }
 
-                    var typeNameSpan = namedTypeSymbol.ConstructedFrom.ToDisplayString(SymbolDisplayFormat.FullyQualifiedFormat).AsSpan();
-                    var start = typeNameSpan.IndexOf(':') + 2;
-                    var end = typeNameSpan.IndexOf('<');
-                    typeNameSpan = typeNameSpan.Slice(start, end - start);
-                    return $"{typeNameSpan}`{namedTypeSymbol.TypeArguments.Length}";
+                    var constructedFrom = namedTypeSymbol.ConstructedFrom;
+                    var ns = constructedFrom.ContainingNamespace.GetFullyQualifiedNameFromDisplayString();
+                    var name = constructedFrom.MetadataName;
+                    var tickIndex = name.IndexOf('`', StringComparison.Ordinal);
+                    if (tickIndex >= 0)
+                    {
+                        name = name.Substring(0, tickIndex);
+                    }
+
+                    return $"{(string.IsNullOrEmpty(ns) ? name : $"{ns}.{name}")}`{namedTypeSymbol.TypeArguments.Length}";
                 }
             }
 

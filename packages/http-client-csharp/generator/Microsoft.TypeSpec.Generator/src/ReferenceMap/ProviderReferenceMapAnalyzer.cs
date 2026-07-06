@@ -100,7 +100,8 @@ namespace Microsoft.TypeSpec.Generator
             customRemovalRoots.UnionWith(generatedPublicDeclarations);
             var customInternalDeclarations = GetCustomCodeInternalGeneratedTypeDeclarations(generatedProviders, graph.Nodes);
             var generatedInternalDeclarations = GetGeneratedInternalTypeDeclarations(generatedProviders, graph.Nodes);
-            customRemovalRoots.UnionWith(GetExistingGeneratedHelperRoots(generatedProviders, generatedInternalDeclarations));
+            var existingGeneratedInternalDeclarations = GetGeneratedExistingSourceInternalTypeDeclarations(generatedProviders, graph.Nodes);
+            customRemovalRoots.UnionWith(GetExistingGeneratedHelperRoots(generatedProviders, existingGeneratedInternalDeclarations));
 
             // Helper types are rooted after an initial reachability pass so unused infrastructure
             // such as change-tracking dictionaries can still be removed when no reachable type needs them.

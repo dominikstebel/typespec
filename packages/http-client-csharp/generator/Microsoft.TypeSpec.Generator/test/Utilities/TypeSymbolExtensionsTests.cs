@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.TypeSpec.Generator.Primitives;
 using Microsoft.TypeSpec.Generator.Tests.Common;
 using Moq;
@@ -94,6 +95,33 @@ namespace Microsoft.TypeSpec.Generator.Tests.Utilities
 
             Assert.AreEqual("T", csharpType.Name);
             Assert.IsNull(csharpType.DeclaringType);
+        }
+
+        [Test]
+        public void CollectionGenericSymbolWithoutAngleBracketDisplayNameGetsFullyQualifiedMetadataName()
+        {
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [CSharpSyntaxTree.ParseText("""
+                using System.Collections.Generic;
+
+                namespace Sample
+                {
+                    public class Container
+                    {
+                        public IReadOnlyList<string> GetResult() => null;
+                    }
+                }
+                """)],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var method = compilation.GetTypeByMetadataName("Sample.Container")!
+                .GetMembers("GetResult")
+                .OfType<IMethodSymbol>()
+                .Single();
+
+            var name = method.ReturnType.GetFullyQualifiedName();
+
+            Assert.AreEqual("System.Collections.Generic.IReadOnlyList`1", name);
         }
 
         private static IPropertySymbol GetPropertySymbol(Compilation compilation, string containerName, string propertyName)

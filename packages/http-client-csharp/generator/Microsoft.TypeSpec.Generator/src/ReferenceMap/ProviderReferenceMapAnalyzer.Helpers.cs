@@ -651,11 +651,20 @@ namespace Microsoft.TypeSpec.Generator
             IReadOnlyDictionary<string, HashSet<string>> references,
             HashSet<string> publicizeReachable,
             HashSet<string> generatedImplementationInternalDeclarations)
+            => HasPublicApiPredecessor(name, references, publicizeReachable, excludedPredecessors: null, generatedImplementationInternalDeclarations);
+
+        private static bool HasPublicApiPredecessor(
+            string name,
+            IReadOnlyDictionary<string, HashSet<string>> references,
+            HashSet<string> publicizeReachable,
+            HashSet<string>? excludedPredecessors,
+            HashSet<string> generatedImplementationInternalDeclarations)
         {
             foreach (var (owner, children) in references)
             {
                 if (!publicizeReachable.Contains(owner) ||
                     string.Equals(owner, name, StringComparison.Ordinal) ||
+                    excludedPredecessors?.Contains(owner) == true ||
                     generatedImplementationInternalDeclarations.Contains(owner) ||
                     !children.Contains(name))
                 {

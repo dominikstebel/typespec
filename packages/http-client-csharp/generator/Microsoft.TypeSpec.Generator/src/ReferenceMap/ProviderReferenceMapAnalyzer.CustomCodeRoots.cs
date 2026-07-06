@@ -141,7 +141,7 @@ namespace Microsoft.TypeSpec.Generator
         private static void AddCustomCodeViewRoots(HashSet<string> roots, TypeProvider customCodeView, HashSet<string> generatedTypeNames, bool publicOnly)
         {
             AddTypeReference(roots, customCodeView.BaseType, generatedTypeNames);
-            AddProviderBodyDependencyTypes(roots, customCodeView.SignatureDependencyTypes, generatedTypeNames, includeSimpleNameReferences: true, includeUnqualifiedSimpleNameReferences: true, includeExtensionReferences: !publicOnly);
+            AddProviderBodyDependencyTypes(roots, customCodeView.SignatureDependencyTypes, generatedTypeNames, includeUnqualifiedSimpleNameReferences: true, includeExtensionReferences: !publicOnly);
             if (!publicOnly)
             {
                 AddProviderBodyDependencyTypes(roots, customCodeView.BodyDependencyTypes, generatedTypeNames);
@@ -401,6 +401,9 @@ namespace Microsoft.TypeSpec.Generator
             return declarations;
         }
 
+        private static HashSet<string> GetGeneratedExistingSourceInternalTypeDeclarations(IReadOnlyList<TypeProvider> providers, HashSet<string> generatedTypeNames)
+            => GetGeneratedTypeDeclarationsByExistingSourceAccessibility(providers, generatedTypeNames, TypeSignatureModifiers.Internal);
+
         private static HashSet<string> GetGeneratedPublicTypeDeclarations(IReadOnlyList<TypeProvider> providers, HashSet<string> generatedTypeNames)
             => GetGeneratedTypeDeclarationsByLastContractAccessibility(providers, generatedTypeNames, TypeSignatureModifiers.Public);
 
@@ -461,7 +464,7 @@ namespace Microsoft.TypeSpec.Generator
         private static bool ExistingSourceHasAccessibility(string projectDirectory, TypeProvider provider, TypeSignatureModifiers accessibility)
         {
             var relativeFilePath = provider.DeclaringTypeProvider?.RelativeFilePath ?? provider.RelativeFilePath;
-            var path = Path.GetFullPath(Path.Combine(projectDirectory, relativeFilePath));
+            var path = GetExistingSourcePath(projectDirectory, relativeFilePath);
             if (!File.Exists(path))
             {
                 return false;
@@ -480,6 +483,37 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             return false;
+        }
+
+        private static string GetExistingSourcePath(string projectDirectory, string relativeFilePath)
+        {
+            var outputDirectory = CodeModelGenerator.Instance.Configuration.OutputDirectory;
+            foreach (var candidate in GetExistingSourcePathCandidates(outputDirectory, projectDirectory, relativeFilePath))
+            {
+                var path = Path.GetFullPath(candidate);
+                if (File.Exists(path))
+                {
+                    return path;
+                }
+            }
+
+            return Path.GetFullPath(Path.Combine(outputDirectory, relativeFilePath));
+        }
+
+        private static IEnumerable<string> GetExistingSourcePathCandidates(string outputDirectory, string projectDirectory, string relativeFilePath)
+        {
+            yield return Path.Combine(outputDirectory, relativeFilePath);
+            yield return Path.Combine(projectDirectory, relativeFilePath);
+
+            var segments = relativeFilePath.Split(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar);
+            if (segments.Length <= 1 || !string.Equals(segments[0], "src", StringComparison.OrdinalIgnoreCase))
+            {
+                yield break;
+            }
+
+            var pathWithoutSrc = Path.Combine(segments.Skip(1).ToArray());
+            yield return Path.Combine(outputDirectory, pathWithoutSrc);
+            yield return Path.Combine(projectDirectory, pathWithoutSrc);
         }
 
         private static bool IsDeclaringTypeMatch(BaseTypeDeclarationSyntax declaration, TypeProvider? declaringTypeProvider)

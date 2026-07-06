@@ -27,6 +27,27 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.PostProcessing
         }
 
         [Test]
+        public async Task ProtocolOnlyOperationBodyParameterModelIsRemovedWhenNotOtherwiseReferenced()
+        {
+            var requestModel = InputFactory.Model("RequestBody");
+            var parameter = InputFactory.BodyParameter("body", requestModel, isRequired: true);
+            var operation = InputFactory.Operation("Create", parameters: [parameter], httpMethod: "POST", generateConvenienceMethod: false);
+            var method = InputFactory.BasicServiceMethod("Create", operation);
+            var client = InputFactory.Client("TestClient", methods: [method]);
+
+            await GenerateAndAssertFiles(
+                enums: [],
+                models: [requestModel],
+                clients: [client],
+                customFiles: [],
+                expectedFiles: [],
+                unexpectedFiles: [
+                    Path.Combine("src", "Generated", "Models", "RequestBody.cs"),
+                    Path.Combine("src", "Generated", "Models", "RequestBody.Serialization.cs")
+                ]);
+        }
+
+        [Test]
         public async Task OperationResponseBodyModelRemainsPublicAsRootOutputModel()
         {
             var responseModel = InputFactory.Model("ResponseBody");

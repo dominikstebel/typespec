@@ -140,6 +140,49 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
         }
 
         [Test]
+        public void UnreferencedHelperDependencyDoesNotKeepUnreferencedSiblingHelper()
+        {
+            var client = new HelperDependencyTestTypeProvider("SampleClient", "Sample", CreateNamedType("ClientPipelineExtensions", "Sample"));
+            var pipelineExtensions = new TestTypeProvider("ClientPipelineExtensions", TypeSignatureModifiers.Internal | TypeSignatureModifiers.Static, ns: "Sample");
+            var cancellationTokenExtensions = new TestTypeProvider("CancellationTokenExtensions", TypeSignatureModifiers.Internal | TypeSignatureModifiers.Static, ns: "Sample");
+            MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(client, pipelineExtensions, cancellationTokenExtensions));
+            CodeModelGenerator.Instance.AddTypeToKeep(client.Type.FullyQualifiedName);
+
+            ProviderReferenceMapAnalyzer.Analyze([client, pipelineExtensions, cancellationTokenExtensions]);
+
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(client));
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(pipelineExtensions));
+            Assert.IsFalse(ProviderReferenceMapAnalyzer.ShouldWriteProvider(cancellationTokenExtensions));
+        }
+
+        [Test]
+        public async Task LastContractInternalHelperDoesNotRootAbsentGeneratedHelper()
+        {
+            var lastContractCompilation = CSharpCompilation.Create(
+                "LastContract",
+                [CSharpSyntaxTree.ParseText("""
+                    namespace Sample
+                    {
+                        internal static class ClientPipelineExtensions
+                        {
+                        }
+                    }
+                    """)],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var client = new TestTypeProvider("SampleClient", TypeSignatureModifiers.Public, ns: "Sample");
+            var pipelineExtensions = new TestTypeProvider("ClientPipelineExtensions", TypeSignatureModifiers.Internal | TypeSignatureModifiers.Static, ns: "Sample");
+            await MockHelpers.LoadMockGeneratorAsync(
+                createOutputLibrary: () => new TestOutputLibrary(client, pipelineExtensions),
+                lastContractCompilation: () => Task.FromResult<Compilation>(lastContractCompilation));
+            CodeModelGenerator.Instance.AddTypeToKeep(client.Type.FullyQualifiedName);
+
+            ProviderReferenceMapAnalyzer.Analyze([client, pipelineExtensions]);
+
+            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(client));
+            Assert.IsFalse(ProviderReferenceMapAnalyzer.ShouldWriteProvider(pipelineExtensions));
+        }
+
+        [Test]
         public void NamespaceLessCustomCodeBodyDependencyDoesNotRootGeneratedTypeInDifferentNamespace()
         {
             var customCodeView = new BodyDependencyTestTypeProvider("CustomType", "Sample", CreateNamedType("ReferencedModel", string.Empty));
@@ -186,6 +229,25 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
 
             Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(customType));
             Assert.IsFalse(ProviderReferenceMapAnalyzer.ShouldWriteProvider(generatedOperationState));
+        }
+
+        [Test]
+        public void PublicCustomSignatureExternalTypeDoesNotPublicizeGeneratedTypeBySimpleName()
+        {
+            var customCodeView = new SignatureDependencyTestTypeProvider(
+                "CustomType",
+                TypeSignatureModifiers.Public,
+                CreateNamedType("Action", "System"));
+            var customType = new CustomizableTestTypeProvider("CustomType", TypeSignatureModifiers.Public, customCodeView, ns: "Sample");
+            var generatedAction = new TestTypeProvider("Action", TypeSignatureModifiers.Internal, ns: "Sample.Models");
+            MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(customType, generatedAction));
+            CodeModelGenerator.Instance.AddTypeToKeep(customType.Type.FullyQualifiedName);
+            CodeModelGenerator.Instance.AddTypeToKeep(generatedAction.Type.FullyQualifiedName, isRoot: false);
+
+            ProviderReferenceMapAnalyzer.ApplyPreWriteAccessibility([customType, generatedAction]);
+
+            Assert.IsTrue(generatedAction.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
+            Assert.IsFalse(generatedAction.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
         }
 
         [Test]
@@ -515,6 +577,65 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             Assert.IsFalse(generatedModel.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
         }
 
+        [Test]
+        public async Task InternalizedGeneratedPredecessorDoesNotPublicizeItsInternalDependency()
+        {
+            var outputPath = Path.Combine(TestContext.CurrentContext.WorkDirectory, "ReferenceMap", nameof(InternalizedGeneratedPredecessorDoesNotPublicizeItsInternalDependency));
+            if (Directory.Exists(outputPath))
+            {
+                Directory.Delete(outputPath, recursive: true);
+            }
+            var projectPath = Path.Combine(outputPath, "src", "Generated", "Models");
+            Directory.CreateDirectory(projectPath);
+            await File.WriteAllTextAsync(Path.Combine(projectPath, "InternalModel.cs"), """
+                namespace Sample.Models
+                {
+                    internal partial class InternalModel
+                    {
+                    }
+                }
+                """);
+            await File.WriteAllTextAsync(Path.Combine(projectPath, "InternalDependency.cs"), """
+                namespace Sample.Models
+                {
+                    internal partial class InternalDependency
+                    {
+                    }
+                }
+                """);
+
+            var dependency = new GeneratedModelTestTypeProvider("InternalDependency", TypeSignatureModifiers.Public, ns: "Sample.Models");
+            var internalModel = new GeneratedModelTestTypeProvider(
+                "InternalModel",
+                TypeSignatureModifiers.Public,
+                ns: "Sample.Models");
+            var publicRoot = new GeneratedModelTestTypeProvider(
+                "PublicRoot",
+                TypeSignatureModifiers.Public,
+                ns: "Sample.Models");
+            await MockHelpers.LoadMockGeneratorAsync(
+                createOutputLibrary: () => new TestOutputLibrary(publicRoot, internalModel, dependency),
+                configuration: "{\"unreferenced-types-handling\":\"removeOrInternalize\"}",
+                outputPath: outputPath);
+            CodeModelGenerator.Instance.AddTypeToKeep(publicRoot.Type.FullyQualifiedName);
+            CodeModelGenerator.Instance.AddTypeToKeep(internalModel.Type.FullyQualifiedName);
+            CodeModelGenerator.Instance.AddTypeToKeep(dependency.Type.FullyQualifiedName);
+
+            publicRoot.Update(properties: [
+                new PropertyProvider($"", MethodSignatureModifiers.Public, internalModel.Type, "InternalModel", new AutoPropertyBody(false), publicRoot)
+            ]);
+            internalModel.Update(properties: [
+                new PropertyProvider($"", MethodSignatureModifiers.Public, dependency.Type, "Dependency", new AutoPropertyBody(false), internalModel)
+            ]);
+
+            ProviderReferenceMapAnalyzer.ApplyPreWriteAccessibility([internalModel, dependency]);
+
+            Assert.IsTrue(internalModel.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
+            Assert.IsFalse(internalModel.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
+            Assert.IsTrue(dependency.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
+            Assert.IsFalse(dependency.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
+        }
+
         private sealed class BodyDependencyTestTypeProvider : TestTypeProvider
         {
             private readonly CSharpType[] _bodyDependencyTypes;
@@ -628,6 +749,25 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             }
 
             protected override TypeProvider? BuildDeclaringTypeProvider() => _declaringTypeProvider;
+        }
+
+        private sealed class GeneratedModelTestTypeProvider : TypeProvider
+        {
+            private readonly string _name;
+            private readonly string _namespace;
+            private readonly TypeSignatureModifiers _declarationModifiers;
+
+            public GeneratedModelTestTypeProvider(string name, TypeSignatureModifiers declarationModifiers, string ns)
+            {
+                _name = name;
+                _namespace = ns;
+                _declarationModifiers = declarationModifiers;
+            }
+
+            protected override string BuildRelativeFilePath() => Path.Combine("src", "Generated", "Models", $"{Name}.cs");
+            protected override string BuildName() => _name;
+            protected override string BuildNamespace() => _namespace;
+            protected override TypeSignatureModifiers BuildDeclarationModifiers() => _declarationModifiers;
         }
 
         private sealed class GenericTestTypeProvider : TestTypeProvider

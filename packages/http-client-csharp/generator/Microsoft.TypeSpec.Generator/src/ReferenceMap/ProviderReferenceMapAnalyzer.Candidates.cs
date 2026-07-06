@@ -60,7 +60,8 @@ namespace Microsoft.TypeSpec.Generator
 
             foreach (var node in publicizeDeclaredNodes)
             {
-                if (!generatedImplementationInternalDeclarations.Contains(node))
+                if (!generatedInternalDeclarations.Contains(node) &&
+                    !generatedImplementationInternalDeclarations.Contains(node))
                 {
                     traversalNodes.Add(node);
                 }
@@ -235,7 +236,7 @@ namespace Microsoft.TypeSpec.Generator
                 }
 
                 if (!publicizeRoots.Contains(node) &&
-                    !HasPublicApiPredecessor(node, internalizeReferences, publicizeReachable, generatedImplementationInternalDeclarations))
+                    !HasPublicApiPredecessor(node, internalizeReferences, publicizeReachable, generatedInternalDeclarations, generatedImplementationInternalDeclarations))
                 {
                     continue;
                 }

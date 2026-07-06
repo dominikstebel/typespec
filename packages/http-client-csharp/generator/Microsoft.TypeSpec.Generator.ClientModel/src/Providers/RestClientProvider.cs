@@ -114,9 +114,14 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             var dependencies = new List<CSharpType>();
             foreach (var serviceMethod in _inputClient.Methods)
             {
+                if (!serviceMethod.Operation.GenerateConvenienceMethod)
+                {
+                    continue;
+                }
+
                 foreach (var parameter in serviceMethod.Operation.Parameters)
                 {
-                    if (parameter is not InputBodyParameter && parameter is not InputMethodParameter { Location: InputRequestLocation.Body })
+                    if (parameter is not InputBodyParameter)
                     {
                         continue;
                     }
