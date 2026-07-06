@@ -1,6 +1,8 @@
 // Copyright (c) Microsoft Corporation. All rights reserved.
 // Licensed under the MIT License.
 
+using System;
+using System.Collections.Generic;
 using System.Linq;
 using Microsoft.TypeSpec.Generator.Providers;
 using Microsoft.TypeSpec.Generator.Statements;
@@ -45,7 +47,7 @@ namespace Microsoft.TypeSpec.Generator.Primitives
 
         private void WriteType(CodeWriter writer)
         {
-            if (IsPublicContext(_provider))
+            if (_provider.PreserveTypeXmlDocs || _provider.ShouldWriteTypeXmlDocs || IsPublicContext(_provider))
             {
                 writer.WriteXmlDocsNoScope(_provider.XmlDocs);
             }
@@ -207,6 +209,11 @@ namespace Microsoft.TypeSpec.Generator.Primitives
 
         private void WriteMethods(CodeWriter writer)
         {
+            if (_provider is ModelFactoryProvider { PreserveLeadingMethodSeparator: true } && _provider.Methods.Count > 0)
+            {
+                writer.WriteLine();
+            }
+
             for (int i = 0; i < _provider.Methods.Count; i++)
             {
                 writer.WriteMethod(_provider.Methods[i]);

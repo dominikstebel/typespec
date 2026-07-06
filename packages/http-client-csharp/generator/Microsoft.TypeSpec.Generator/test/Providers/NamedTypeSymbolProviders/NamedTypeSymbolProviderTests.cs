@@ -6,6 +6,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.CodeAnalysis;
+using Microsoft.CodeAnalysis.CSharp;
 using Microsoft.TypeSpec.Generator.Expressions;
 using Microsoft.TypeSpec.Generator.Primitives;
 using Microsoft.TypeSpec.Generator.Providers;
@@ -368,6 +369,129 @@ namespace Microsoft.TypeSpec.Generator.Tests.Providers.NamedTypeSymbolProviders
 
             var doIt = provider.Methods.Single(m => m.Signature.Name == "DoIt");
             Assert.IsFalse(doIt.IsPartialMethod, "Partial methods with bodies should not be treated as customization signals.");
+        }
+
+        [Test]
+        public void BodyDependenciesIncludeUsingNamespaceCandidatesForUnresolvedTypeSyntax()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                using Sample.Models;
+
+                namespace Sample
+                {
+                    public partial class CustomClient
+                    {
+                        public void Test(object response)
+                        {
+                            ReferencedModel result = (ReferencedModel)response;
+                        }
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var symbol = CompilationHelper.GetSymbol(compilation.Assembly.Modules.First().GlobalNamespace, "CustomClient")!;
+            var provider = new NamedTypeSymbolProvider(symbol, compilation);
+
+            Assert.IsTrue(provider.BodyDependencyTypes.Any(type => type.FullyQualifiedName == "Sample.Models.ReferencedModel"));
+        }
+
+        [Test]
+        public void PublicInterfaceMemberSignatureDependenciesAreIncluded()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                using Sample.Models;
+
+                namespace Sample
+                {
+                    public partial interface ICustomApi
+                    {
+                        GeneratedModel Item { get; }
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var symbol = CompilationHelper.GetSymbol(compilation.Assembly.Modules.First().GlobalNamespace, "ICustomApi")!;
+            var provider = new NamedTypeSymbolProvider(symbol, compilation);
+
+            Assert.IsTrue(provider.SignatureDependencyTypes.Any(type => type.FullyQualifiedName == "Sample.Models.GeneratedModel"));
+        }
+
+        [Test]
+        public void PublicNestedMemberSignatureDependenciesAreIncluded()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                using Sample.Models;
+
+                namespace Sample
+                {
+                    public partial class CustomApi
+                    {
+                        public class Nested
+                        {
+                            public GeneratedModel Item { get; }
+                        }
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var symbol = CompilationHelper.GetSymbol(compilation.Assembly.Modules.First().GlobalNamespace, "CustomApi")!;
+            var provider = new NamedTypeSymbolProvider(symbol, compilation);
+
+            Assert.IsTrue(provider.SignatureDependencyTypes.Any(type => type.FullyQualifiedName == "Sample.Models.GeneratedModel"));
+        }
+
+        [Test]
+        public void SourceInputHelperYieldsNestedSymbols()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                namespace Sample
+                {
+                    public partial class CustomApi
+                    {
+                        public class Nested
+                        {
+                        }
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+
+            var symbols = Microsoft.TypeSpec.Generator.SourceInput.SourceInputHelper.GetSymbols(compilation.Assembly.Modules.First().GlobalNamespace);
+
+            Assert.IsTrue(symbols.Any(symbol => symbol.MetadataName == "Nested"));
+        }
+
+        [Test]
+        public void MetadataNamePreservesGenericArity()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                namespace Sample.Models
+                {
+                    public partial class CustomModel<T>
+                    {
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var symbol = CompilationHelper.GetSymbol(compilation.Assembly.Modules.First().GlobalNamespace, "CustomModel`1")!;
+            var provider = new NamedTypeSymbolProvider(symbol, compilation);
+
+            Assert.AreEqual("Sample.Models.CustomModel`1", provider.MetadataName);
         }
 
         // Operator signatures parsed from a customization partial must compare equal to the corresponding generated signatures.

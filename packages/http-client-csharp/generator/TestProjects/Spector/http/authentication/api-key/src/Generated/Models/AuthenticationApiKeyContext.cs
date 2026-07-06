@@ -6,6 +6,7 @@ using System.ClientModel.Primitives;
 
 namespace Authentication.ApiKey
 {
+    [ModelReaderWriterBuildable(typeof(InvalidAuth))]
     public partial class AuthenticationApiKeyContext : ModelReaderWriterContext
     {
     }

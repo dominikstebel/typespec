@@ -200,11 +200,6 @@ namespace Microsoft.TypeSpec.Generator
 
             if (modelProvider != null)
             {
-                if (model.Access == "public")
-                {
-                    CodeModelGenerator.Instance.AddTypeToKeep(modelProvider);
-                }
-
                 CSharpTypeMap[modelProvider.Type] = modelProvider;
                 TypeProvidersByName[modelProvider.Type.Name] = modelProvider;
             }
@@ -298,11 +293,6 @@ namespace Microsoft.TypeSpec.Generator
                 { Type: { IsValueType: true, IsStruct: false } } => enumProvider.FixedEnumView ?? enumProvider,
                 _ => enumProvider,
             };
-
-            if (enumType.Access == "public")
-            {
-                CodeModelGenerator.Instance.AddTypeToKeep(enumProvider);
-            }
 
             EnumCache.Add(enumCacheKey, enumProvider);
 

@@ -9,6 +9,12 @@ using Parameters.Spread._Model;
 namespace Parameters.Spread
 {
     [ModelReaderWriterBuildable(typeof(BodyParameter))]
+    [ModelReaderWriterBuildable(typeof(SpreadAsRequestBodyRequest))]
+    [ModelReaderWriterBuildable(typeof(SpreadAsRequestParameterRequest))]
+    [ModelReaderWriterBuildable(typeof(SpreadCompositeRequestMixRequest))]
+    [ModelReaderWriterBuildable(typeof(SpreadParameterWithInnerAliasRequest))]
+    [ModelReaderWriterBuildable(typeof(SpreadParameterWithInnerModelRequest))]
+    [ModelReaderWriterBuildable(typeof(SpreadWithMultipleParametersRequest))]
     public partial class ParametersSpreadContext : ModelReaderWriterContext
     {
     }

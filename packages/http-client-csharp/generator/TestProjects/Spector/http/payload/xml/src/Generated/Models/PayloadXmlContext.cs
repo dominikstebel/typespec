@@ -33,6 +33,7 @@ namespace Payload.Xml
     [ModelReaderWriterBuildable(typeof(ModelWithUnwrappedModelArray))]
     [ModelReaderWriterBuildable(typeof(ModelWithWrappedPrimitiveCustomItemNames))]
     [ModelReaderWriterBuildable(typeof(SimpleModel))]
+    [ModelReaderWriterBuildable(typeof(XmlErrorBody))]
     public partial class PayloadXmlContext : ModelReaderWriterContext
     {
     }

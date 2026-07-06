@@ -8,6 +8,7 @@ using Parameters.Basic._ImplicitBody;
 
 namespace Parameters.Basic
 {
+    [ModelReaderWriterBuildable(typeof(SimpleRequest))]
     [ModelReaderWriterBuildable(typeof(User))]
     public partial class ParametersBasicContext : ModelReaderWriterContext
     {

@@ -6,8 +6,10 @@ using System.ClientModel.Primitives;
 
 namespace Response.StatusCodeRange
 {
+    [ModelReaderWriterBuildable(typeof(DefaultError))]
     [ModelReaderWriterBuildable(typeof(ErrorInRange))]
     [ModelReaderWriterBuildable(typeof(NotFoundError))]
+    [ModelReaderWriterBuildable(typeof(Standard4XXError))]
     public partial class ResponseStatusCodeRangeContext : ModelReaderWriterContext
     {
     }

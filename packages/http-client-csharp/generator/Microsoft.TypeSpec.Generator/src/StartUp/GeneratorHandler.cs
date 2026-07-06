@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text.Json;
+using System.Threading.Tasks;
 using System.Xml.Linq;
 using Microsoft.TypeSpec.Generator.EmitterRpc;
 
@@ -221,10 +222,11 @@ namespace Microsoft.TypeSpec.Generator
             };
 
             process.Start();
-            // Read both streams to avoid deadlocks, even though we only use stderr for error reporting.
-            process.StandardOutput.ReadToEnd();
-            var stderr = process.StandardError.ReadToEnd();
+            var stdoutTask = process.StandardOutput.ReadToEndAsync();
+            var stderrTask = process.StandardError.ReadToEndAsync();
             process.WaitForExit();
+            Task.WaitAll(stdoutTask, stderrTask);
+            var stderr = stderrTask.Result;
 
             if (process.ExitCode != 0)
             {

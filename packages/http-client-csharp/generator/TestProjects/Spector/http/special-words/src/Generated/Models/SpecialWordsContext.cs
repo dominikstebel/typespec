@@ -44,6 +44,7 @@ namespace SpecialWords
     [ModelReaderWriterBuildable(typeof(Try))]
     [ModelReaderWriterBuildable(typeof(While))]
     [ModelReaderWriterBuildable(typeof(With))]
+    [ModelReaderWriterBuildable(typeof(WithItemsRequest))]
     [ModelReaderWriterBuildable(typeof(Yield))]
     public partial class SpecialWordsContext : ModelReaderWriterContext
     {
