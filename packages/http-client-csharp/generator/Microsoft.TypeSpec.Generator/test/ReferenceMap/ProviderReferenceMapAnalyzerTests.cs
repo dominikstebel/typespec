@@ -141,7 +141,7 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
         }
 
         [Test]
-        public void ProviderAttributeTypeOfArgumentRootsGeneratedType()
+        public void ProviderAttributeTypeOfArgumentDoesNotRootGeneratedType()
         {
             var context = new AttributeDependencyTestTypeProvider(
                 "SampleContext",
@@ -152,10 +152,11 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(context, invalidAuth));
             CodeModelGenerator.Instance.AddTypeToKeep(context.Type.FullyQualifiedName);
 
-            ProviderReferenceMapAnalyzer.Analyze([context, invalidAuth]);
+            using var session = ProviderReferenceMapAnalyzer.PrepareForGeneration([context, invalidAuth]);
 
             Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(context));
-            Assert.IsTrue(ProviderReferenceMapAnalyzer.ShouldWriteProvider(invalidAuth));
+            Assert.IsFalse(ProviderReferenceMapAnalyzer.ShouldWriteProvider(invalidAuth));
+            Assert.IsEmpty(context.GetAttributes());
         }
 
         [Test]

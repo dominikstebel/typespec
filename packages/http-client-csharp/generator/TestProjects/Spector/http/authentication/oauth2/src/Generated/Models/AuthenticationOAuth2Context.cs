@@ -6,7 +6,6 @@ using System.ClientModel.Primitives;
 
 namespace Authentication.OAuth2
 {
-    [ModelReaderWriterBuildable(typeof(InvalidAuth))]
     public partial class AuthenticationOAuth2Context : ModelReaderWriterContext
     {
     }

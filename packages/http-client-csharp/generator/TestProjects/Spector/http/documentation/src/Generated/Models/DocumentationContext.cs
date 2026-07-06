@@ -8,7 +8,6 @@ using Documentation._Lists;
 namespace Documentation
 {
     [ModelReaderWriterBuildable(typeof(BulletPointsModel))]
-    [ModelReaderWriterBuildable(typeof(BulletPointsModelRequest))]
     public partial class DocumentationContext : ModelReaderWriterContext
     {
     }

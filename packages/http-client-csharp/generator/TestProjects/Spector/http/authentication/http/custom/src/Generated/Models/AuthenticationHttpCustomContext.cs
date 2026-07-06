@@ -6,7 +6,6 @@ using System.ClientModel.Primitives;
 
 namespace Authentication.Http.Custom
 {
-    [ModelReaderWriterBuildable(typeof(InvalidAuth))]
     public partial class AuthenticationHttpCustomContext : ModelReaderWriterContext
     {
     }

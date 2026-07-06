@@ -37,7 +37,7 @@ namespace Microsoft.TypeSpec.Generator
                 AddTypeReference(references[current], provider.DeclaringTypeProvider?.Type, nodes, serializationReferenceNamesByType);
                 if (!publicOnly)
                 {
-                    AddAttributes(references[current], provider.Attributes, nodes, serializationReferenceNamesByType, includeArguments: true);
+                    AddAttributes(references[current], provider.Attributes, nodes, serializationReferenceNamesByType, includeArguments: false);
                 }
 
                 if (publicOnly && !provider.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public))

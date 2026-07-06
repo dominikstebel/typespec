@@ -3,18 +3,10 @@
 #nullable disable
 
 using System.ClientModel.Primitives;
-using Payload.MultiPart._FormData.File;
-using TypeSpec.Http;
 
 namespace Payload.MultiPart
 {
     [ModelReaderWriterBuildable(typeof(Address))]
-    [ModelReaderWriterBuildable(typeof(File))]
-    [ModelReaderWriterBuildable(typeof(File1))]
-    [ModelReaderWriterBuildable(typeof(FileOptionalContentType))]
-    [ModelReaderWriterBuildable(typeof(FileRequiredMetaData))]
-    [ModelReaderWriterBuildable(typeof(FileSpecificContentType))]
-    [ModelReaderWriterBuildable(typeof(FileWithRequiredFilename))]
     public partial class PayloadMultiPartContext : ModelReaderWriterContext
     {
     }

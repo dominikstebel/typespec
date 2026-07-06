@@ -334,6 +334,9 @@ namespace Microsoft.TypeSpec.Generator.Providers
 
         internal IReadOnlyList<MethodBodyStatement> GetAttributes() => _attributes ??= BuildAttributes();
 
+        internal void UpdateAttributes(IEnumerable<MethodBodyStatement> attributes)
+            => _attributes = (attributes as IReadOnlyList<MethodBodyStatement>) ?? [.. attributes];
+
         protected virtual CSharpType[] GetTypeArguments() => [];
 
         internal PropertyProvider[] FilterCustomizedProperties(IEnumerable<PropertyProvider> specProperties)

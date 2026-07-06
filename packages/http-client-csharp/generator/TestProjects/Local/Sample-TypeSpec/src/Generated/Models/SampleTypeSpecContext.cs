@@ -7,7 +7,6 @@
 
 using System.ClientModel.Primitives;
 using SampleTypeSpec.Models.Custom;
-using TypeSpec.Http;
 
 namespace SampleTypeSpec
 {
@@ -19,7 +18,6 @@ namespace SampleTypeSpec
     [ModelReaderWriterBuildable(typeof(AnotherDynamicModel))]
     [ModelReaderWriterBuildable(typeof(Dog))]
     [ModelReaderWriterBuildable(typeof(DynamicModel))]
-    [ModelReaderWriterBuildable(typeof(File))]
     [ModelReaderWriterBuildable(typeof(Friend))]
     [ModelReaderWriterBuildable(typeof(GetNotebookResponse))]
     [ModelReaderWriterBuildable(typeof(GetWidgetMetricsResponse))]

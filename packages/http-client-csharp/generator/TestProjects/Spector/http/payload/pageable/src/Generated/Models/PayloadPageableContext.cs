@@ -3,36 +3,13 @@
 #nullable disable
 
 using System.ClientModel.Primitives;
-using Payload.Pageable._PageSize;
-using Payload.Pageable._ServerDrivenPagination;
 using Payload.Pageable._ServerDrivenPagination.AlternateInitialVerb;
-using Payload.Pageable._ServerDrivenPagination.ContinuationToken;
 
 namespace Payload.Pageable
 {
     [ModelReaderWriterBuildable(typeof(Filter))]
-    [ModelReaderWriterBuildable(typeof(LinkResponse))]
-    [ModelReaderWriterBuildable(typeof(LinkStringResponse))]
-    [ModelReaderWriterBuildable(typeof(ListWithoutContinuationResponse))]
-    [ModelReaderWriterBuildable(typeof(ListWithPageSizeResponse))]
-    [ModelReaderWriterBuildable(typeof(NestedLinkResponse))]
-    [ModelReaderWriterBuildable(typeof(NestedLinkResponseNestedItems))]
-    [ModelReaderWriterBuildable(typeof(NestedLinkResponseNestedNext))]
     [ModelReaderWriterBuildable(typeof(Pet))]
-    [ModelReaderWriterBuildable(typeof(PostResponse))]
-    [ModelReaderWriterBuildable(typeof(RequestHeaderNestedResponseBodyResponse))]
-    [ModelReaderWriterBuildable(typeof(RequestHeaderNestedResponseBodyResponseNestedItems))]
-    [ModelReaderWriterBuildable(typeof(RequestHeaderNestedResponseBodyResponseNestedNext))]
-    [ModelReaderWriterBuildable(typeof(RequestHeaderResponseBodyResponse))]
-    [ModelReaderWriterBuildable(typeof(RequestHeaderResponseHeaderResponse))]
-    [ModelReaderWriterBuildable(typeof(RequestQueryNestedResponseBodyResponse))]
-    [ModelReaderWriterBuildable(typeof(RequestQueryNestedResponseBodyResponseNestedItems))]
-    [ModelReaderWriterBuildable(typeof(RequestQueryNestedResponseBodyResponseNestedNext))]
-    [ModelReaderWriterBuildable(typeof(RequestQueryResponseBodyResponse))]
-    [ModelReaderWriterBuildable(typeof(RequestQueryResponseHeaderResponse))]
     [ModelReaderWriterBuildable(typeof(XmlPet))]
-    [ModelReaderWriterBuildable(typeof(XmlPetListResult))]
-    [ModelReaderWriterBuildable(typeof(XmlPetListResultWithNextLink))]
     public partial class PayloadPageableContext : ModelReaderWriterContext
     {
     }

@@ -22,6 +22,7 @@ namespace Microsoft.TypeSpec.Generator
         private static readonly ConditionalWeakTable<HashSet<string>, Dictionary<string, string[]>> _simpleNameLookupCache = new();
         private static TypeProvider? _preWriteModelFactory;
         private static MethodProvider[]? _preWriteModelFactoryMethods;
+        private static readonly Dictionary<TypeProvider, MethodBodyStatement[]> _preWriteProviderAttributes = new(ReferenceEqualityComparer.Instance);
 
         public static ProviderReferenceMapResult? LatestResult => _latestResult;
 
@@ -30,6 +31,7 @@ namespace Microsoft.TypeSpec.Generator
             ResetPreWriteAccessibility();
             ApplyPreWriteAccessibility(providers);
             Analyze(providers);
+            FilterPreWriteProviderAttributes(providers);
             return new ProviderReferenceMapSession();
         }
 
@@ -39,6 +41,7 @@ namespace Microsoft.TypeSpec.Generator
         public static void ResetPreWriteAccessibility()
         {
             RestorePreWriteModelFactoryMethods();
+            RestorePreWriteProviderAttributes();
             _latestResult = null;
         }
 
@@ -82,6 +85,21 @@ namespace Microsoft.TypeSpec.Generator
             _preWriteModelFactory.Update(methods: _preWriteModelFactoryMethods);
             _preWriteModelFactory = null;
             _preWriteModelFactoryMethods = null;
+        }
+
+        private static void RestorePreWriteProviderAttributes()
+        {
+            if (_preWriteProviderAttributes.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var (provider, attributes) in _preWriteProviderAttributes)
+            {
+                provider.UpdateAttributes(attributes);
+            }
+
+            _preWriteProviderAttributes.Clear();
         }
 
         public static void Analyze(IReadOnlyList<TypeProvider> providers)
@@ -143,6 +161,67 @@ namespace Microsoft.TypeSpec.Generator
                 RemoveMethodsFromModelFactory(GetSimpleNames(removeCandidates));
             }
         }
+
+        private static void FilterPreWriteProviderAttributes(IReadOnlyList<TypeProvider> providers)
+        {
+            if (_latestResult == null || _latestResult.RemoveCandidates.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var provider in GetGeneratedProviders(providers))
+            {
+                var attributes = provider.GetAttributes();
+                var filteredAttributes = attributes
+                    .Where(attribute => !HasRemovedTypeOfArgument(attribute, _latestResult.RemoveCandidates))
+                    .ToArray();
+
+                if (filteredAttributes.Length == attributes.Count)
+                {
+                    continue;
+                }
+
+                _preWriteProviderAttributes.TryAdd(provider, [.. attributes]);
+                provider.UpdateAttributes(filteredAttributes);
+            }
+        }
+
+        private static bool HasRemovedTypeOfArgument(MethodBodyStatement statement, HashSet<string> removeCandidates)
+        {
+            var attribute = statement switch
+            {
+                AttributeStatement attributeStatement => attributeStatement,
+                SuppressionStatement suppression => suppression.AsStatement<AttributeStatement>(),
+                _ => null
+            };
+
+            if (attribute == null)
+            {
+                return false;
+            }
+
+            foreach (var argument in attribute.Arguments)
+            {
+                if (IsRemovedTypeOfArgument(argument, removeCandidates))
+                {
+                    return true;
+                }
+            }
+
+            foreach (var (_, argument) in attribute.PositionalArguments)
+            {
+                if (IsRemovedTypeOfArgument(argument, removeCandidates))
+                {
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsRemovedTypeOfArgument(ValueExpression argument, HashSet<string> removeCandidates)
+            => argument is TypeOfExpression typeOf &&
+                removeCandidates.Contains(GetProviderTypeName(typeOf.Type));
 
         private static (HashSet<string> InternalizeCandidates, HashSet<string> PublicizeCandidates) GetPreWriteAccessibilityCandidates(IReadOnlyList<TypeProvider> providers)
         {

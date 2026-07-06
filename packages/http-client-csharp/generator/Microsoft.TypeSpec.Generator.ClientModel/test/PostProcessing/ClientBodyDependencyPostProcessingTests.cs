@@ -27,7 +27,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.PostProcessing
         }
 
         [Test]
-        public async Task ProtocolOnlyOperationBodyParameterModelIsGeneratedInternalForModelReaderWriterContext()
+        public async Task ProtocolOnlyOperationBodyParameterModelIsRemovedWhenNotOtherwiseReferenced()
         {
             var requestModel = InputFactory.Model("RequestBody");
             var parameter = InputFactory.BodyParameter("body", requestModel, isRequired: true);
@@ -40,11 +40,11 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.PostProcessing
                 models: [requestModel],
                 clients: [client],
                 customFiles: [],
-                expectedFiles: [
+                expectedFiles: [],
+                unexpectedFiles: [
                     Path.Combine("src", "Generated", "Models", "RequestBody.cs"),
                     Path.Combine("src", "Generated", "Models", "RequestBody.Serialization.cs")
-                ],
-                internalModelNames: ["RequestBody"]);
+                ]);
         }
 
         [Test]
@@ -183,7 +183,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.PostProcessing
         }
 
         [Test]
-        public async Task OperationResponseBodyModelIsGeneratedInternalForModelReaderWriterContext()
+        public async Task OperationResponseBodyModelIsRemovedWhenNotOtherwiseReferenced()
         {
             var metadataOnlyModel = InputFactory.Model("MetadataOnlyResponse");
             var operation = InputFactory.Operation(
@@ -203,11 +203,11 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.PostProcessing
                 models: [metadataOnlyModel],
                 clients: [client],
                 customFiles: [],
-                expectedFiles: [
+                expectedFiles: [],
+                unexpectedFiles: [
                     Path.Combine("src", "Generated", "Models", "MetadataOnlyResponse.cs"),
                     Path.Combine("src", "Generated", "Models", "MetadataOnlyResponse.Serialization.cs")
-                ],
-                internalModelNames: ["MetadataOnlyResponse"]);
+                ]);
         }
 
         [Test]
@@ -236,7 +236,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.PostProcessing
         }
 
         [Test]
-        public async Task InternalAdditionalRootModelIsGeneratedInternalForModelReaderWriterContext()
+        public async Task InternalAdditionalRootModelIsRemovedWhenNotOtherwiseReferenced()
         {
             var metadataOnlyModel = InputFactory.Model("MetadataOnlyResponse", access: "internal");
             var operation = InputFactory.Operation(
@@ -256,11 +256,11 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Tests.PostProcessing
                 models: [metadataOnlyModel],
                 clients: [client],
                 customFiles: [],
-                expectedFiles: [
+                expectedFiles: [],
+                unexpectedFiles: [
                     Path.Combine("src", "Generated", "Models", "MetadataOnlyResponse.cs"),
                     Path.Combine("src", "Generated", "Models", "MetadataOnlyResponse.Serialization.cs")
                 ],
-                internalModelNames: ["MetadataOnlyResponse"],
                 configureGenerator: () =>
                 {
                     var provider = CodeModelGenerator.Instance.OutputLibrary.TypeProviders.Single(provider => provider.Name == "MetadataOnlyResponse");
