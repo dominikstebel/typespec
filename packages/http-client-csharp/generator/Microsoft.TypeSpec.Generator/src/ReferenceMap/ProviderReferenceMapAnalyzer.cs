@@ -24,7 +24,14 @@ namespace Microsoft.TypeSpec.Generator
         private static MethodProvider[]? _preWriteModelFactoryMethods;
 
         public static ProviderReferenceMapResult? LatestResult => _latestResult;
-        public static bool PreWriteAccessibilityApplied { get; private set; }
+
+        public static ProviderReferenceMapSession PrepareForGeneration(IReadOnlyList<TypeProvider> providers)
+        {
+            ResetPreWriteAccessibility();
+            ApplyPreWriteAccessibility(providers);
+            Analyze(providers);
+            return new ProviderReferenceMapSession();
+        }
 
         public static bool ShouldWriteProvider(TypeProvider provider) =>
             _latestResult?.RemoveCandidates.Contains(GetProviderTypeName(provider.Type)) != true;
@@ -33,12 +40,10 @@ namespace Microsoft.TypeSpec.Generator
         {
             RestorePreWriteModelFactoryMethods();
             _latestResult = null;
-            PreWriteAccessibilityApplied = false;
         }
 
         public static void ApplyPreWriteAccessibility(IReadOnlyList<TypeProvider> providers)
         {
-            PreWriteAccessibilityApplied = false;
             if (Configuration.UnreferencedTypesHandling == Configuration.UnreferencedTypesHandlingOption.KeepAll)
             {
                 return;
@@ -65,7 +70,6 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             RemoveMethodsFromModelFactory(GetSimpleNames(internalizeCandidates));
-            PreWriteAccessibilityApplied = true;
         }
 
         public static void RestorePreWriteModelFactoryMethods()

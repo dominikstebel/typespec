@@ -118,6 +118,8 @@ namespace Microsoft.TypeSpec.Generator
                 return;
             }
 
+            var fullNamesToRemove = namesToRemove;
+            var simpleNamesToRemove = GetSimpleNames(namesToRemove);
             var modelFactory = CodeModelGenerator.Instance.OutputLibrary.ModelFactory.Value;
             _preWriteModelFactory = modelFactory;
             _preWriteModelFactoryMethods ??= [.. modelFactory.Methods];
@@ -126,7 +128,7 @@ namespace Microsoft.TypeSpec.Generator
             for (int i = 0; i < modelFactory.Methods.Count; i++)
             {
                 var method = modelFactory.Methods[i];
-                if (!namesToRemove.Contains(method.Signature.Name))
+                if (!ShouldRemoveModelFactoryMethod(method, fullNamesToRemove, simpleNamesToRemove))
                 {
                     methodsToKeep.Add(method);
                     continue;
@@ -144,6 +146,26 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             modelFactory.Update(methods: methodsToKeep);
+        }
+
+        private static bool ShouldRemoveModelFactoryMethod(
+            MethodProvider method,
+            HashSet<string> fullNamesToRemove,
+            HashSet<string> simpleNamesToRemove)
+        {
+            if (simpleNamesToRemove.Contains(method.Signature.Name))
+            {
+                return true;
+            }
+
+            if (method.Signature.ReturnType == null)
+            {
+                return false;
+            }
+
+            var returnTypeName = GetProviderTypeName(method.Signature.ReturnType);
+            return fullNamesToRemove.Contains(returnTypeName) ||
+                simpleNamesToRemove.Contains(StripGenericArity(GetSimpleName(returnTypeName)));
         }
 
         private static HashSet<string> GetPostProcessorDeclaredNodes(IReadOnlyList<TypeProvider> providers, HashSet<string> nodes, bool publicOnly)

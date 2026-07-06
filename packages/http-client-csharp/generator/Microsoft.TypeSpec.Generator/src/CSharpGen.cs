@@ -27,7 +27,6 @@ namespace Microsoft.TypeSpec.Generator
         {
             CodeModelGenerator.Instance.Emitter.Info("Starting code generation");
             CodeModelGenerator.Instance.Stopwatch.Start();
-            ProviderReferenceMapAnalyzer.ResetPreWriteAccessibility();
 
             var outputPath = CodeModelGenerator.Instance.Configuration.OutputDirectory;
             var generatedSourceOutputPath = CodeModelGenerator.Instance.Configuration.ProjectGeneratedDirectory;
@@ -95,12 +94,11 @@ namespace Microsoft.TypeSpec.Generator
 
             try
             {
-                generatedCodeWorkspace.ApplyPreWriteAccessibility(output.TypeProviders);
-                generatedCodeWorkspace.AnalyzeProviderReferenceMap(output.TypeProviders);
+                using var referenceMapSession = ProviderReferenceMapAnalyzer.PrepareForGeneration(output.TypeProviders);
 
                 foreach (var outputType in output.TypeProviders)
                 {
-                    if (!ProviderReferenceMapAnalyzer.ShouldWriteProvider(outputType))
+                    if (!referenceMapSession.ShouldWriteProvider(outputType))
                     {
                         continue;
                     }
@@ -115,7 +113,7 @@ namespace Microsoft.TypeSpec.Generator
 
                     foreach (var serialization in outputType.SerializationProviders)
                     {
-                        if (!ProviderReferenceMapAnalyzer.ShouldWriteProvider(serialization))
+                        if (!referenceMapSession.ShouldWriteProvider(serialization))
                         {
                             continue;
                         }
@@ -128,7 +126,7 @@ namespace Microsoft.TypeSpec.Generator
                 // Add all the generated files to the workspace
                 await Task.WhenAll(generateFilesTasks);
 
-                ProviderReferenceMapAnalyzer.RestorePreWriteModelFactoryMethods();
+                referenceMapSession.RestorePreWriteModelFactoryMethods();
 
                 LoggingHelpers.LogElapsedTime("All generated types have been written into memory");
 

@@ -572,7 +572,7 @@ namespace Microsoft.TypeSpec.Generator
             var simpleNames = new HashSet<string>(StringComparer.Ordinal);
             foreach (var name in names)
             {
-                simpleNames.Add(GetSimpleName(name));
+                simpleNames.Add(StripGenericArity(GetSimpleName(name)));
             }
 
             return simpleNames;

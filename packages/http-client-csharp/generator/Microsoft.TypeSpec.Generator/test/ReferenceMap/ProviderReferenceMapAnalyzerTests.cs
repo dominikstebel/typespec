@@ -636,6 +636,41 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             Assert.IsFalse(dependency.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
         }
 
+        [Test]
+        public void InternalizedGenericModelRemovesAritylessModelFactoryMethod()
+        {
+            var genericArgument = CreateNamedType("T", string.Empty);
+            var genericModel = new GenericTestTypeProvider(
+                "GenericModel`1",
+                TypeSignatureModifiers.Public,
+                "Sample.Models",
+                genericArgument);
+            var outputLibrary = new TestOutputLibrary(genericModel);
+            MockHelpers.LoadMockGenerator(
+                createOutputLibrary: () => outputLibrary,
+                configuration: "{\"unreferenced-types-handling\":\"removeOrInternalize\"}");
+            var modelFactory = CodeModelGenerator.Instance.OutputLibrary.ModelFactory.Value;
+            modelFactory.Update(methods:
+            [
+                new MethodProvider(
+                    new MethodSignature(
+                        "GenericModel",
+                        $"",
+                        MethodSignatureModifiers.Static | MethodSignatureModifiers.Public,
+                        genericModel.Type,
+                        $"",
+                        []),
+                    MethodBodyStatement.Empty,
+                    modelFactory)
+            ]);
+
+            ProviderReferenceMapAnalyzer.ApplyPreWriteAccessibility([genericModel]);
+
+            Assert.IsTrue(genericModel.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Internal));
+            Assert.IsFalse(genericModel.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public));
+            Assert.IsEmpty(modelFactory.Methods.Select(m => m.Signature.Name));
+        }
+
         private sealed class BodyDependencyTestTypeProvider : TestTypeProvider
         {
             private readonly CSharpType[] _bodyDependencyTypes;

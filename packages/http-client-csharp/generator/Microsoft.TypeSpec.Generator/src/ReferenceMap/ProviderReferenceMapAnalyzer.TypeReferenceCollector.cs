@@ -171,7 +171,13 @@ namespace Microsoft.TypeSpec.Generator
         private static string StripGenericArity(string name)
         {
             var tick = name.IndexOf('`');
-            return tick < 0 ? name : name.Substring(0, tick);
+            var typeArgumentStart = name.IndexOf('<');
+            var genericSuffixStart = tick < 0
+                ? typeArgumentStart
+                : typeArgumentStart < 0
+                    ? tick
+                    : Math.Min(tick, typeArgumentStart);
+            return genericSuffixStart < 0 ? name : name.Substring(0, genericSuffixStart);
         }
     }
 }

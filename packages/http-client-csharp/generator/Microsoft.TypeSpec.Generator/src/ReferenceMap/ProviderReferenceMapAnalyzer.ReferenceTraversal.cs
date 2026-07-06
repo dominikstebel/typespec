@@ -163,25 +163,31 @@ namespace Microsoft.TypeSpec.Generator
         private static IReadOnlyList<TypeProvider> GetGeneratedProviders(IReadOnlyList<TypeProvider> providers)
         {
             var generatedProviders = new List<TypeProvider>();
+            var visited = new HashSet<TypeProvider>();
             foreach (var provider in providers)
             {
-                AddGeneratedProvider(generatedProviders, provider);
+                AddGeneratedProvider(generatedProviders, visited, provider);
             }
 
             return generatedProviders;
         }
 
-        private static void AddGeneratedProvider(List<TypeProvider> generatedProviders, TypeProvider provider)
+        private static void AddGeneratedProvider(List<TypeProvider> generatedProviders, HashSet<TypeProvider> visited, TypeProvider provider)
         {
+            if (!visited.Add(provider))
+            {
+                return;
+            }
+
             generatedProviders.Add(provider);
             foreach (var nestedType in provider.NestedTypes)
             {
-                AddGeneratedProvider(generatedProviders, nestedType);
+                AddGeneratedProvider(generatedProviders, visited, nestedType);
             }
 
             foreach (var serializationProvider in provider.SerializationProviders)
             {
-                AddGeneratedProvider(generatedProviders, serializationProvider);
+                AddGeneratedProvider(generatedProviders, visited, serializationProvider);
             }
         }
     }
