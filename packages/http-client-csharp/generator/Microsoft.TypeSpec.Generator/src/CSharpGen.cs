@@ -178,15 +178,30 @@ namespace Microsoft.TypeSpec.Generator
 
         internal static void FilterAllCustomizedMembers(OutputLibrary output)
         {
+            var visited = new HashSet<TypeProvider>(ReferenceEqualityComparer.Instance);
             foreach (var typeProvider in output.TypeProviders)
             {
-                // Update the type with the potentially modified members, filtering out customized members
-                // after the visitors have been applied so that the filtering is done against the final version.
-                FilterCustomizedMembers(typeProvider);
-                foreach (var serializationProvider in typeProvider.SerializationProviders)
-                {
-                    FilterCustomizedMembers(serializationProvider);
-                }
+                FilterAllCustomizedMembers(typeProvider, visited);
+            }
+        }
+
+        private static void FilterAllCustomizedMembers(TypeProvider typeProvider, HashSet<TypeProvider> visited)
+        {
+            if (!visited.Add(typeProvider))
+            {
+                return;
+            }
+
+            // Update the type with the potentially modified members, filtering out customized members
+            // after the visitors have been applied so that the filtering is done against the final version.
+            FilterCustomizedMembers(typeProvider);
+            foreach (var serializationProvider in typeProvider.SerializationProviders)
+            {
+                FilterAllCustomizedMembers(serializationProvider, visited);
+            }
+            foreach (var nestedType in typeProvider.NestedTypes)
+            {
+                FilterAllCustomizedMembers(nestedType, visited);
             }
         }
 

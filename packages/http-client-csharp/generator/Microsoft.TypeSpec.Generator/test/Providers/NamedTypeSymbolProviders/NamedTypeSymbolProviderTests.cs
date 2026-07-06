@@ -399,6 +399,81 @@ namespace Microsoft.TypeSpec.Generator.Tests.Providers.NamedTypeSymbolProviders
         }
 
         [Test]
+        public void PublicInterfaceMemberSignatureDependenciesAreIncluded()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                using Sample.Models;
+
+                namespace Sample
+                {
+                    public partial interface ICustomApi
+                    {
+                        GeneratedModel Item { get; }
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var symbol = CompilationHelper.GetSymbol(compilation.Assembly.Modules.First().GlobalNamespace, "ICustomApi")!;
+            var provider = new NamedTypeSymbolProvider(symbol, compilation);
+
+            Assert.IsTrue(provider.SignatureDependencyTypes.Any(type => type.FullyQualifiedName == "Sample.Models.GeneratedModel"));
+        }
+
+        [Test]
+        public void PublicNestedMemberSignatureDependenciesAreIncluded()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                using Sample.Models;
+
+                namespace Sample
+                {
+                    public partial class CustomApi
+                    {
+                        public class Nested
+                        {
+                            public GeneratedModel Item { get; }
+                        }
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+            var symbol = CompilationHelper.GetSymbol(compilation.Assembly.Modules.First().GlobalNamespace, "CustomApi")!;
+            var provider = new NamedTypeSymbolProvider(symbol, compilation);
+
+            Assert.IsTrue(provider.SignatureDependencyTypes.Any(type => type.FullyQualifiedName == "Sample.Models.GeneratedModel"));
+        }
+
+        [Test]
+        public void SourceInputHelperYieldsNestedSymbols()
+        {
+            var tree = CSharpSyntaxTree.ParseText("""
+                namespace Sample
+                {
+                    public partial class CustomApi
+                    {
+                        public class Nested
+                        {
+                        }
+                    }
+                }
+                """);
+            var compilation = CSharpCompilation.Create(
+                "TestAssembly",
+                [tree],
+                [MetadataReference.CreateFromFile(typeof(object).Assembly.Location)]);
+
+            var symbols = Microsoft.TypeSpec.Generator.SourceInput.SourceInputHelper.GetSymbols(compilation.Assembly.Modules.First().GlobalNamespace);
+
+            Assert.IsTrue(symbols.Any(symbol => symbol.MetadataName == "Nested"));
+        }
+
+        [Test]
         public void MetadataNamePreservesGenericArity()
         {
             var tree = CSharpSyntaxTree.ParseText("""

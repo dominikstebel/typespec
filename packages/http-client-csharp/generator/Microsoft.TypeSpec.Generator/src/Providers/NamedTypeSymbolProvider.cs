@@ -371,14 +371,7 @@ namespace Microsoft.TypeSpec.Generator.Providers
 
                 var semanticModel = _compilation.GetSemanticModel(typeDeclaration.SyntaxTree);
                 var namespaceCandidates = GetNamespaceCandidates(typeDeclaration);
-                AddSyntaxTypeReferences(typeDeclaration.BaseList, dependencies, semanticModel, namespaceCandidates);
-                foreach (var member in typeDeclaration.Members)
-                {
-                    if (IsPublicApiMember(member))
-                    {
-                        AddPublicSignatureDependencyTypes(member, dependencies);
-                    }
-                }
+                AddPublicTypeSignatureDependencyTypes(typeDeclaration, dependencies, semanticModel, namespaceCandidates);
             }
 
             return [.. dependencies];
@@ -441,9 +434,28 @@ namespace Microsoft.TypeSpec.Generator.Providers
                     AddSyntaxTypeReferences(@delegate.ParameterList, dependencies, semanticModel, namespaceCandidates);
                     AddSyntaxTypeReferences(@delegate.ConstraintClauses, dependencies, semanticModel, namespaceCandidates);
                     break;
+                case TypeDeclarationSyntax type:
+                    AddPublicTypeSignatureDependencyTypes(type, dependencies, semanticModel, namespaceCandidates);
+                    break;
                 case BaseTypeDeclarationSyntax type:
                     AddSyntaxTypeReferences(type.BaseList, dependencies, semanticModel, namespaceCandidates);
                     break;
+            }
+        }
+
+        private void AddPublicTypeSignatureDependencyTypes(
+            TypeDeclarationSyntax typeDeclaration,
+            HashSet<CSharpType> dependencies,
+            SemanticModel semanticModel,
+            IReadOnlyList<string> namespaceCandidates)
+        {
+            AddSyntaxTypeReferences(typeDeclaration.BaseList, dependencies, semanticModel, namespaceCandidates);
+            foreach (var member in typeDeclaration.Members)
+            {
+                if (IsPublicApiMember(member))
+                {
+                    AddPublicSignatureDependencyTypes(member, dependencies);
+                }
             }
         }
 
@@ -476,13 +488,13 @@ namespace Microsoft.TypeSpec.Generator.Providers
         private static bool IsPublicApiMember(MemberDeclarationSyntax member)
             => member switch
             {
-                EventDeclarationSyntax @event => IsPublic(@event.Modifiers),
-                EventFieldDeclarationSyntax @event => IsPublic(@event.Modifiers),
-                BaseFieldDeclarationSyntax field => IsPublic(field.Modifiers),
-                BaseMethodDeclarationSyntax method => IsPublic(method.Modifiers),
-                BasePropertyDeclarationSyntax property => IsPublic(property.Modifiers),
-                DelegateDeclarationSyntax @delegate => IsPublic(@delegate.Modifiers),
-                BaseTypeDeclarationSyntax type => IsPublic(type.Modifiers),
+                EventDeclarationSyntax @event => IsPublic(@event.Modifiers) || IsImplicitPublicInterfaceMember(@event),
+                EventFieldDeclarationSyntax @event => IsPublic(@event.Modifiers) || IsImplicitPublicInterfaceMember(@event),
+                BaseFieldDeclarationSyntax field => IsPublic(field.Modifiers) || IsImplicitPublicInterfaceMember(field),
+                BaseMethodDeclarationSyntax method => IsPublic(method.Modifiers) || IsImplicitPublicInterfaceMember(method),
+                BasePropertyDeclarationSyntax property => IsPublic(property.Modifiers) || IsImplicitPublicInterfaceMember(property),
+                DelegateDeclarationSyntax @delegate => IsPublic(@delegate.Modifiers) || IsImplicitPublicInterfaceMember(@delegate),
+                BaseTypeDeclarationSyntax type => IsPublic(type.Modifiers) || IsImplicitPublicInterfaceMember(type),
                 _ => false
             };
 
@@ -490,6 +502,12 @@ namespace Microsoft.TypeSpec.Generator.Providers
             => modifiers.Any(static modifier =>
                 modifier.IsKind(SyntaxKind.PublicKeyword) ||
                 modifier.IsKind(SyntaxKind.ProtectedKeyword));
+
+        private static bool IsImplicitPublicInterfaceMember(MemberDeclarationSyntax member)
+            => member.Parent is InterfaceDeclarationSyntax &&
+                !member.Modifiers.Any(static modifier =>
+                    modifier.IsKind(SyntaxKind.PrivateKeyword) ||
+                    modifier.IsKind(SyntaxKind.InternalKeyword));
 
         private static bool IsGeneratedSourceFile(string filePath) =>
             filePath.Contains("/Generated/", StringComparison.Ordinal) ||

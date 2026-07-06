@@ -152,6 +152,7 @@ namespace Microsoft.TypeSpec.Generator.SourceInput
             if (!_nameMap.Value.TryGetValue(name, out var type))
             {
                 type = FindNamedTypeSymbol(compilation, includeReferencedAssemblies, fullyQualifiedMetadataName);
+                type ??= FindNestedNamedTypeSymbol(compilation, ns, name, declaringTypeName);
             }
 
             return type != null ? new NamedTypeSymbolProvider(type, compilation) : null;
@@ -180,6 +181,32 @@ namespace Microsoft.TypeSpec.Generator.SourceInput
             }
 
             return name != null;
+        }
+
+        private static INamedTypeSymbol? FindNestedNamedTypeSymbol(Compilation compilation, string ns, string name, string? declaringTypeName)
+        {
+            if (declaringTypeName == null)
+            {
+                return null;
+            }
+
+            foreach (var module in compilation.Assembly.Modules)
+            {
+                foreach (var type in SourceInputHelper.GetSymbols(module.GlobalNamespace))
+                {
+                    if (type is not INamedTypeSymbol namedTypeSymbol ||
+                        !string.Equals(namedTypeSymbol.Name, name, StringComparison.Ordinal) ||
+                        !string.Equals(namedTypeSymbol.ContainingType?.Name, declaringTypeName, StringComparison.Ordinal) ||
+                        !string.Equals(namedTypeSymbol.ContainingNamespace.ToDisplayString(), ns, StringComparison.Ordinal))
+                    {
+                        continue;
+                    }
+
+                    return namedTypeSymbol;
+                }
+            }
+
+            return null;
         }
     }
 }
