@@ -248,6 +248,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
 
         protected override string BuildRelativeFilePath() => Path.Combine("src", "Generated", $"{Name}.cs");
 
+        // TODO: Remove this once generated source parity no longer depends on internal ClientOptions XML docs.
         protected override bool ShouldWriteTypeXmlDocs => CustomCodeView is null;
 
         protected override TypeSignatureModifiers BuildDeclarationModifiers()

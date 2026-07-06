@@ -28,7 +28,6 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
         private readonly FieldProvider _uriBuilderField;
         private readonly FieldProvider _pathAndQueryField;
         private readonly FieldProvider _pathLengthField;
-        protected override bool IncludeGeneratedBodyReferences => true;
 
         private PropertyProvider? _uriBuilderProperty;
         private PropertyProvider UriBuilderProperty => _uriBuilderProperty ??= new(

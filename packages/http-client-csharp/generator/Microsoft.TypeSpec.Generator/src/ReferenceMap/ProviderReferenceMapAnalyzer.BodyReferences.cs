@@ -397,7 +397,7 @@ namespace Microsoft.TypeSpec.Generator
 
             return IsClientProvider(provider) ||
                 isSerializationProvider ||
-                provider.IncludeGeneratedBodyReferences ||
+                IsGeneratedInternalHelperDeclaration(provider) ||
                 provider.HelperDependencyTypes.Count > 0 ||
                 provider.BodyDependencyTypes.Count > 0;
         }
