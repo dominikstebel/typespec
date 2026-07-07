@@ -69,12 +69,12 @@ namespace Microsoft.TypeSpec.Generator.SourceInput
 
         public TypeProvider? FindForTypeInLastContract(string ns, string name, string? declaringTypeName = null)
         {
-            return FindTypeInCompilation(LastContract, ns, name, true, declaringTypeName, includeInternal: false);
+            return FindTypeInCustomization(LastContract, ns, name, true, declaringTypeName, includeInternal: false);
         }
 
         internal TypeProvider? FindForTypeInLastContractIncludingInternal(string ns, string name, string? declaringTypeName = null)
         {
-            return FindTypeInCompilation(LastContract, ns, name, true, declaringTypeName);
+            return FindTypeInCustomization(LastContract, ns, name, true, declaringTypeName);
         }
 
         private IReadOnlyList<TypeProvider> PopulateCustomizationTypeProviders()
@@ -101,29 +101,6 @@ namespace Microsoft.TypeSpec.Generator.SourceInput
 
         internal IReadOnlyList<TypeProvider> GetCustomizationTypeProviders() => _customizationTypeProviders.Value;
 
-        private TypeProvider? FindTypeInCompilation(
-            Compilation? compilation,
-            string ns,
-            string name,
-            bool includeReferencedAssemblies,
-            string? declaringTypeName,
-            bool includeInternal = true)
-        {
-            if (compilation == null)
-            {
-                return null;
-            }
-            string fullyQualifiedMetadataName = GetFullyQualifiedMetadataName(ns, name, declaringTypeName);
-
-            var type = FindNamedTypeSymbol(compilation, includeReferencedAssemblies, fullyQualifiedMetadataName);
-            if (!includeInternal && type != null && type.DeclaredAccessibility != Accessibility.Public)
-            {
-                type = null;
-            }
-
-            return type != null ? new NamedTypeSymbolProvider(type, compilation) : null;
-        }
-
         private static INamedTypeSymbol? FindNamedTypeSymbol(Compilation compilation, bool includeReferencedAssemblies, string fullyQualifiedMetadataName)
             => includeReferencedAssemblies
                 ? compilation.GetTypeByMetadataName(fullyQualifiedMetadataName)
@@ -139,7 +116,8 @@ namespace Microsoft.TypeSpec.Generator.SourceInput
             string ns,
             string name,
             bool includeReferencedAssemblies,
-            string? declaringTypeName = null)
+            string? declaringTypeName = null,
+            bool includeInternal = true)
         {
             if (compilation == null)
             {
@@ -148,11 +126,22 @@ namespace Microsoft.TypeSpec.Generator.SourceInput
 
             var fullyQualifiedMetadataName = GetFullyQualifiedMetadataName(ns, name, declaringTypeName);
 
-            // Either find by the CodeGenType attribute or by the actual type name.
-            if (!_nameMap.Value.TryGetValue(name, out var type))
+            // Either find by the CodeGenType attribute in customization or by the actual type name.
+            INamedTypeSymbol? type = null;
+            if (ReferenceEquals(compilation, Customization))
+            {
+                _nameMap.Value.TryGetValue(name, out type);
+            }
+
+            if (type == null)
             {
                 type = FindNamedTypeSymbol(compilation, includeReferencedAssemblies, fullyQualifiedMetadataName);
                 type ??= FindNestedNamedTypeSymbol(compilation, ns, name, declaringTypeName);
+            }
+
+            if (!includeInternal && type != null && type.DeclaredAccessibility != Accessibility.Public)
+            {
+                type = null;
             }
 
             return type != null ? new NamedTypeSymbolProvider(type, compilation) : null;

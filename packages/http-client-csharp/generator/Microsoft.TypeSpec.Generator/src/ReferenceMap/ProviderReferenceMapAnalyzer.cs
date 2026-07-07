@@ -96,7 +96,7 @@ namespace Microsoft.TypeSpec.Generator
 
             foreach (var (provider, attributes) in _preWriteProviderAttributes)
             {
-                provider.UpdateAttributes(attributes);
+                provider.Update(attributes: attributes);
             }
 
             _preWriteProviderAttributes.Clear();
@@ -182,7 +182,7 @@ namespace Microsoft.TypeSpec.Generator
                 }
 
                 _preWriteProviderAttributes.TryAdd(provider, [.. attributes]);
-                provider.UpdateAttributes(filteredAttributes);
+                provider.Update(attributes: filteredAttributes);
             }
         }
 

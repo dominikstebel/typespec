@@ -131,10 +131,6 @@ namespace Microsoft.TypeSpec.Generator
                     }
 
                     AddSignatureReferences(references[current], method.Signature, nodes, serializationReferenceNamesByType, includeAttributes: !publicOnly, includeAttributeArguments: false);
-                    if (!publicOnly)
-                    {
-                        AddTypeReference(references[current], GetCollectionDefinitionType(method), nodes, serializationReferenceNamesByType);
-                    }
                 }
             }
 
@@ -171,14 +167,6 @@ namespace Microsoft.TypeSpec.Generator
             }
 
             return result;
-        }
-
-        private static CSharpType? GetCollectionDefinitionType(MethodProvider method)
-        {
-            var property = method.GetType().GetProperty("CollectionDefinition");
-            return property?.GetValue(method) is TypeProvider collectionDefinition
-                ? collectionDefinition.Type
-                : null;
         }
     }
 }

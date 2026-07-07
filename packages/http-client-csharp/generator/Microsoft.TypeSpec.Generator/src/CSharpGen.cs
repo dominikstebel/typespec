@@ -181,8 +181,9 @@ namespace Microsoft.TypeSpec.Generator
             }
         }
 
-        private static void FilterAllCustomizedMembers(TypeProvider typeProvider, HashSet<TypeProvider> visited)
+        private static void FilterAllCustomizedMembers(TypeProvider typeProvider, HashSet<TypeProvider>? visited = null)
         {
+            visited ??= new HashSet<TypeProvider>(ReferenceEqualityComparer.Instance);
             if (!visited.Add(typeProvider))
             {
                 return;

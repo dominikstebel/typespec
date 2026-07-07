@@ -4,7 +4,6 @@
 using System;
 using System.Collections;
 using System.Collections.Generic;
-using System.Linq;
 using System.Reflection;
 using Microsoft.TypeSpec.Generator.Expressions;
 using Microsoft.TypeSpec.Generator.Primitives;
@@ -37,7 +36,6 @@ namespace Microsoft.TypeSpec.Generator
                     graph.Nodes);
                 AddProviderBodyDependencyTypes(graph.References[providerName], provider.BodyDependencyTypes, graph.Nodes);
                 AddGeneratedProviderNamespaceBodyDependencyTypes(graph.References[providerName], provider, graph.Nodes);
-                AddProviderInfrastructureReferences(graph.References[providerName], provider, isSerializationProvider, graph.Nodes);
             }
         }
 
@@ -78,140 +76,6 @@ namespace Microsoft.TypeSpec.Generator
             {
                 AddExactMetadataNameMatch(references, $"{providerNamespace}.{aritylessDependencyName}", nodes);
             }
-        }
-
-        private static void AddProviderInfrastructureReferences(HashSet<string> references, TypeProvider provider, bool isSerializationProvider, HashSet<string> nodes)
-        {
-            AddMatchingName(references, "ProviderConstants", nodes);
-            AddMatchingName(references, "TypeFormatters", nodes);
-
-            if (provider.SerializationProviders.Count > 0)
-            {
-                AddSerializationExtensionReferences(references, provider, nodes);
-            }
-
-            if (isSerializationProvider)
-            {
-                AddMatchingName(references, "Optional", nodes);
-                AddMatchingName(references, "ModelSerializationExtensions", nodes);
-                AddSerializationExtensionReferences(references, provider, nodes);
-            }
-
-            foreach (var method in provider.Methods)
-            {
-                AddMethodInfrastructureReferences(references, method, nodes);
-            }
-        }
-
-        private static void AddSerializationExtensionReferences(HashSet<string> references, TypeProvider provider, HashSet<string> nodes)
-        {
-            AddSerializationExtensionReferences(references, provider.Type, nodes);
-            AddSerializationExtensionReferences(references, provider.BaseType, nodes);
-            foreach (var implementedType in provider.Implements)
-            {
-                AddSerializationExtensionReferences(references, implementedType, nodes);
-            }
-
-            foreach (var property in provider.Properties)
-            {
-                AddSerializationExtensionReferences(references, property.Type, nodes);
-            }
-
-            foreach (var field in provider.Fields)
-            {
-                AddSerializationExtensionReferences(references, field.Type, nodes);
-            }
-
-            foreach (var constructor in provider.Constructors)
-            {
-                AddSerializationExtensionReferences(references, constructor.Signature.ReturnType, nodes);
-                foreach (var parameter in constructor.Signature.Parameters)
-                {
-                    AddSerializationExtensionReferences(references, parameter.Type, nodes);
-                }
-            }
-
-            foreach (var method in provider.Methods)
-            {
-                AddSerializationExtensionReferences(references, method.Signature.ReturnType, nodes);
-                foreach (var parameter in method.Signature.Parameters)
-                {
-                    AddSerializationExtensionReferences(references, parameter.Type, nodes);
-                }
-            }
-        }
-
-        private static void AddSerializationExtensionReferences(HashSet<string> references, CSharpType? type, HashSet<string> nodes)
-        {
-            if (type == null)
-            {
-                return;
-            }
-
-            if (string.IsNullOrEmpty(type.Namespace))
-            {
-                AddMatchingName(references, $"{type.Name}Extensions", nodes);
-            }
-            else
-            {
-                AddExactMetadataNameMatch(references, $"{type.Namespace}.{type.Name}Extensions", nodes);
-            }
-            foreach (var argument in type.Arguments)
-            {
-                AddSerializationExtensionReferences(references, argument, nodes);
-            }
-        }
-
-        private static void AddMethodInfrastructureReferences(HashSet<string> references, MethodProvider method, HashSet<string> nodes)
-        {
-            AddReturnTypeInfrastructureReferences(references, method.Signature.ReturnType, nodes);
-        }
-
-        private static void AddReturnTypeInfrastructureReferences(HashSet<string> references, CSharpType? returnType, HashSet<string> nodes)
-        {
-            var type = UnwrapTask(returnType);
-            if (type == null)
-            {
-                return;
-            }
-
-            var typeName = StripGenericArity(type.Name);
-            if (string.Equals(typeName, "Pageable", StringComparison.Ordinal))
-            {
-                AddMatchingName(references, "PageableWrapper", nodes);
-            }
-            else if (string.Equals(typeName, "AsyncPageable", StringComparison.Ordinal))
-            {
-                AddMatchingName(references, "AsyncPageableWrapper", nodes);
-            }
-            else if (string.Equals(typeName, "ArmOperation", StringComparison.Ordinal))
-            {
-                AddMatchingNamesWithSimpleNameSuffix(references, "ArmOperation", nodes);
-                AddMatchingNamesWithSimpleNameSuffix(references, "OperationSource", nodes);
-                if (type.Arguments.Count > 0)
-                {
-                    AddMatchingName(references, $"{BuildOperationSourceTypeName(type.Arguments[0])}OperationSource", nodes);
-                }
-            }
-        }
-
-        private static CSharpType? UnwrapTask(CSharpType? type)
-        {
-            var typeName = type == null ? null : StripGenericArity(type.Name);
-            if ((string.Equals(typeName, "Task", StringComparison.Ordinal) ||
-                string.Equals(typeName, "ValueTask", StringComparison.Ordinal)) &&
-                type?.Arguments.Count > 0)
-            {
-                return type.Arguments[0];
-            }
-
-            return type;
-        }
-
-        private static string BuildOperationSourceTypeName(CSharpType type)
-        {
-            var argumentNames = string.Join("", type.Arguments.Select(BuildOperationSourceTypeName));
-            return $"{type.Name}{(argumentNames.Length > 0 ? "Of" : string.Empty)}{argumentNames}";
         }
 
         private static IReadOnlyList<CSharpType> GetNonEnumStructuredBodyReferenceTypes(TypeProvider provider, HashSet<string> nodes)

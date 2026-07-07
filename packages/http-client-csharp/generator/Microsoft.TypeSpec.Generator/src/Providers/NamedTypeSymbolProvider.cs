@@ -23,6 +23,7 @@ namespace Microsoft.TypeSpec.Generator.Providers
         private INamedTypeSymbol _namedTypeSymbol;
         private readonly Compilation _compilation;
         private string? _metadataName;
+        private string? _metadataSimpleName;
         private TypeProvider? _baseTypeProvider;
 
         public NamedTypeSymbolProvider(INamedTypeSymbol namedTypeSymbol, Compilation compilation)
@@ -46,7 +47,7 @@ namespace Microsoft.TypeSpec.Generator.Providers
             }
         }
 
-        internal string MetadataSimpleName => _namedTypeSymbol.Name;
+        internal string MetadataSimpleName => _metadataSimpleName ??= _namedTypeSymbol.Name;
 
         private protected sealed override NamedTypeSymbolProvider? BuildCustomCodeView(string? generatedTypeName = default, string? generatedTypeNamespace = default) => null;
         private protected sealed override TypeProvider? BuildLastContractView(string? generatedTypeName = default, string? generatedTypeNamespace = default) => null;

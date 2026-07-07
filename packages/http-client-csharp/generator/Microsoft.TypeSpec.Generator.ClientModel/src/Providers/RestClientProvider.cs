@@ -81,9 +81,13 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
         protected override IReadOnlyList<CSharpType> BuildHelperDependencyTypes()
         {
             var uriBuilderType = ScmCodeModelGenerator.Instance.TypeFactory.HttpRequestApi.ToExpression().UriBuilderType;
-            var dependencies = uriBuilderType == typeof(ClientUriBuilderDefinition)
-                ? new List<CSharpType> { new ClientUriBuilderDefinition().Type }
-                : [];
+            var dependencies = new List<CSharpType>();
+            var dependencyNames = new HashSet<string>(StringComparer.Ordinal);
+            if (uriBuilderType == typeof(ClientUriBuilderDefinition))
+            {
+                TryAddDependency(dependencies, dependencyNames, new ClientUriBuilderDefinition().Type);
+            }
+
             foreach (var serviceMethod in _inputClient.Methods)
             {
                 foreach (var parameter in serviceMethod.Operation.Parameters)
@@ -97,11 +101,11 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                     var type = ScmCodeModelGenerator.Instance.TypeFactory.CreateCSharpType(parameter.Type);
                     if (type?.IsDictionary == true)
                     {
-                        AddDependency(dependencies, ScmCodeModelGenerator.Instance.TypeFactory.DictionaryInitializationType);
+                        TryAddDependency(dependencies, dependencyNames, ScmCodeModelGenerator.Instance.TypeFactory.DictionaryInitializationType);
                     }
                     else if (type?.IsCollection == true)
                     {
-                        AddDependency(dependencies, ScmCodeModelGenerator.Instance.TypeFactory.ListInitializationType);
+                        TryAddDependency(dependencies, dependencyNames, ScmCodeModelGenerator.Instance.TypeFactory.ListInitializationType);
                     }
                 }
             }
@@ -112,6 +116,8 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
         protected override IReadOnlyList<CSharpType> BuildBodyDependencyTypes()
         {
             var dependencies = new List<CSharpType>();
+            var dependencyNames = new HashSet<string>(StringComparer.Ordinal);
+            TryAddDependency(dependencies, dependencyNames, new TypeFormattersDefinition().Type);
             foreach (var serviceMethod in _inputClient.Methods)
             {
                 if (!serviceMethod.Operation.GenerateConvenienceMethod)
@@ -129,7 +135,7 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                     var type = ScmCodeModelGenerator.Instance.TypeFactory.CreateCSharpType(parameter.Type);
                     if (type != null)
                     {
-                        AddDependency(dependencies, type);
+                        TryAddDependency(dependencies, dependencyNames, type);
                     }
                 }
             }
@@ -137,11 +143,9 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             return dependencies;
         }
 
-        private static void AddDependency(List<CSharpType> dependencies, CSharpType dependency)
+        private static void TryAddDependency(List<CSharpType> dependencies, HashSet<string> dependencyNames, CSharpType dependency)
         {
-            if (!dependencies.Any(existing =>
-                existing.Name == dependency.Name &&
-                existing.Namespace == dependency.Namespace))
+            if (dependencyNames.Add(dependency.FullyQualifiedName))
             {
                 dependencies.Add(dependency);
             }
@@ -1279,6 +1283,9 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
                 // when one was already published.
                 UpdateParameterNameWithBackCompat(inputParam, inputParam.Name, client.BackCompatProvider, serviceMethod);
 
+                // Protocol and CreateRequest methods send Content-Type as a plain header value even
+                // when the input is modeled as a literal/constant, so avoid the general factory's
+                // constant-to-enum parameter shaping for this generated header.
                 ParameterProvider? parameter = IsContentTypeParameter(inputParam) &&
                     methodType is ScmMethodKind.Protocol or ScmMethodKind.CreateRequest
                     ? CreateContentTypeParameter(inputParam)

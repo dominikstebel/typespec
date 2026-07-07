@@ -229,7 +229,7 @@ namespace Microsoft.TypeSpec.Generator.Tests.Providers
                     new MethodSignature("TestMethod", $"", MethodSignatureModifiers.Public, null, $"", []),
                     Snippet.Throw(Snippet.Null), new TestTypeProvider())]);
             typeProvider.Update(attributes: [
-                    new(typeof(ObsoleteAttribute))
+                    new AttributeStatement(typeof(ObsoleteAttribute))
                 ]);
 
             Assert.IsNotNull(typeProvider.Attributes);
@@ -242,7 +242,7 @@ namespace Microsoft.TypeSpec.Generator.Tests.Providers
 
             // re-add the attributes
             typeProvider.Update(attributes: [
-                new(typeof(ObsoleteAttribute))
+                new AttributeStatement(typeof(ObsoleteAttribute))
             ]);
 
             Assert.AreEqual(1, typeProvider.Attributes.Count);

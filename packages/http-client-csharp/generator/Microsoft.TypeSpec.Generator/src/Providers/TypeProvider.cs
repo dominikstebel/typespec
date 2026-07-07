@@ -334,9 +334,6 @@ namespace Microsoft.TypeSpec.Generator.Providers
 
         internal IReadOnlyList<MethodBodyStatement> GetAttributes() => _attributes ??= BuildAttributes();
 
-        internal void UpdateAttributes(IEnumerable<MethodBodyStatement> attributes)
-            => _attributes = (attributes as IReadOnlyList<MethodBodyStatement>) ?? [.. attributes];
-
         protected virtual CSharpType[] GetTypeArguments() => [];
 
         internal PropertyProvider[] FilterCustomizedProperties(IEnumerable<PropertyProvider> specProperties)
@@ -602,7 +599,7 @@ namespace Microsoft.TypeSpec.Generator.Providers
             IEnumerable<FieldProvider>? fields = null,
             IEnumerable<TypeProvider>? serializations = null,
             IEnumerable<TypeProvider>? nestedTypes = null,
-            IEnumerable<AttributeStatement>? attributes = default,
+            IEnumerable<MethodBodyStatement>? attributes = default,
             IEnumerable<CSharpType>? implements = null,
             XmlDocProvider? xmlDocs = null,
             TypeSignatureModifiers? modifiers = null,
@@ -657,7 +654,7 @@ namespace Microsoft.TypeSpec.Generator.Providers
             }
             if (attributes != null)
             {
-                _attributes = (attributes as IReadOnlyList<AttributeStatement>) ?? [.. attributes];
+                _attributes = (attributes as IReadOnlyList<MethodBodyStatement>) ?? [.. attributes];
             }
 
             if (name != null)

@@ -121,6 +121,9 @@ namespace Microsoft.TypeSpec.Generator.ClientModel.Providers
             ? [ScmCodeModelGenerator.Instance.TypeFactory.DictionaryInitializationType]
             : [];
 
+        protected override IReadOnlyList<CSharpType> BuildBodyDependencyTypes() =>
+            [new OptionalDefinition().Type, ScmCodeModelGenerator.Instance.ModelSerializationExtensionsDefinition.Type];
+
         protected override SuppressionStatement[] BuildDisabledFileWarnings()
         {
             if (_model.CanonicalView.Properties.Any(p => ScmModelProvider.IsFileBinaryContentType(p.Type)))

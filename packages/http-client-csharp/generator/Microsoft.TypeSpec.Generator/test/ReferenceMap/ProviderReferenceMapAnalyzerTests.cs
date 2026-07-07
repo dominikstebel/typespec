@@ -288,12 +288,15 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
         }
 
         [Test]
-        public void SerializationProviderInfrastructureRootsUseSerializationProviderRelationship()
+        public void SerializationProviderInfrastructureRootsUseProviderBodyDependencies()
         {
-            var serializationProvider = new TestTypeProvider("SampleModelSerializer", TypeSignatureModifiers.Public);
-            var model = new ClientProvider("SampleModel", serializationProvider);
             var optional = new TestTypeProvider("Optional", TypeSignatureModifiers.Public);
             var modelSerializationExtensions = new TestTypeProvider("ModelSerializationExtensions", TypeSignatureModifiers.Public);
+            var serializationProvider = new ClientProvider(
+                "SampleModelSerializer",
+                ns: null,
+                bodyDependencyTypes: [optional.Type, modelSerializationExtensions.Type]);
+            var model = new ClientProvider("SampleModel", serializationProvider);
             MockHelpers.LoadMockGenerator(createOutputLibrary: () => new TestOutputLibrary(
                 model,
                 serializationProvider,
@@ -936,23 +939,26 @@ namespace Microsoft.TypeSpec.Generator.Tests.ReferenceMap
             private readonly TypeProvider[] _serializationProviders;
             private readonly TypeProvider? _customCodeView;
             private readonly CSharpType[] _signatureDependencyTypes;
+            private readonly CSharpType[] _bodyDependencyTypes;
 
             public ClientProvider(string name, params TypeProvider[] serializationProviders)
                 : this(name, ns: null, customCodeView: null, serializationProviders: serializationProviders)
             {
             }
 
-            public ClientProvider(string name, string? ns, TypeProvider? customCodeView = null, TypeProvider[]? serializationProviders = null, params CSharpType[] signatureDependencyTypes)
+            public ClientProvider(string name, string? ns, TypeProvider? customCodeView = null, TypeProvider[]? serializationProviders = null, CSharpType[]? bodyDependencyTypes = null, params CSharpType[] signatureDependencyTypes)
                 : base(name, TypeSignatureModifiers.Public, ns: ns)
             {
                 _serializationProviders = serializationProviders ?? [];
                 _customCodeView = customCodeView;
                 _signatureDependencyTypes = signatureDependencyTypes;
+                _bodyDependencyTypes = bodyDependencyTypes ?? [];
             }
 
             protected override TypeProvider[] BuildSerializationProviders() => _serializationProviders;
             private protected override TypeProvider? BuildCustomCodeView(string? generatedTypeName = default, string? generatedTypeNamespace = default) => _customCodeView;
             protected internal override IReadOnlyList<CSharpType> BuildSignatureDependencyTypes() => _signatureDependencyTypes;
+            protected internal override IReadOnlyList<CSharpType> BuildBodyDependencyTypes() => _bodyDependencyTypes;
         }
 
         private static CSharpType CreateNamedType(string name, string ns, params CSharpType[] arguments)
