@@ -22,7 +22,6 @@ namespace Microsoft.TypeSpec.Generator
         private static readonly ConditionalWeakTable<HashSet<string>, Dictionary<string, string[]>> _simpleNameLookupCache = new();
         private static TypeProvider? _preWriteModelFactory;
         private static MethodProvider[]? _preWriteModelFactoryMethods;
-        private static readonly Dictionary<TypeProvider, MethodBodyStatement[]> _preWriteProviderAttributes = new(ReferenceEqualityComparer.Instance);
 
         public static ProviderReferenceMapResult? LatestResult => _latestResult;
 
@@ -31,7 +30,6 @@ namespace Microsoft.TypeSpec.Generator
             ResetPreWriteAccessibility();
             ApplyPreWriteAccessibility(providers);
             Analyze(providers);
-            FilterPreWriteProviderAttributes(providers);
             return new ProviderReferenceMapSession();
         }
 
@@ -41,7 +39,6 @@ namespace Microsoft.TypeSpec.Generator
         public static void ResetPreWriteAccessibility()
         {
             RestorePreWriteModelFactoryMethods();
-            RestorePreWriteProviderAttributes();
             _latestResult = null;
         }
 
@@ -52,8 +49,8 @@ namespace Microsoft.TypeSpec.Generator
                 return;
             }
 
-            // Accessibility has to be adjusted before files are written so provider declarations
-            // and model factory signatures are emitted with their final accessibility.
+            // Accessibility has to be adjusted before files are written. Roslyn can remove files
+            // later, but it cannot safely change provider declarations or model factory signatures.
             var (internalizeCandidates, publicizeCandidates) = GetPreWriteAccessibilityCandidates(providers);
             foreach (var provider in GetGeneratedProviders(providers))
             {
@@ -85,21 +82,6 @@ namespace Microsoft.TypeSpec.Generator
             _preWriteModelFactory.Update(methods: _preWriteModelFactoryMethods);
             _preWriteModelFactory = null;
             _preWriteModelFactoryMethods = null;
-        }
-
-        private static void RestorePreWriteProviderAttributes()
-        {
-            if (_preWriteProviderAttributes.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var (provider, attributes) in _preWriteProviderAttributes)
-            {
-                provider.Update(attributes: attributes);
-            }
-
-            _preWriteProviderAttributes.Clear();
         }
 
         public static void Analyze(IReadOnlyList<TypeProvider> providers)
@@ -162,67 +144,6 @@ namespace Microsoft.TypeSpec.Generator
             }
         }
 
-        private static void FilterPreWriteProviderAttributes(IReadOnlyList<TypeProvider> providers)
-        {
-            if (_latestResult == null || _latestResult.RemoveCandidates.Count == 0)
-            {
-                return;
-            }
-
-            foreach (var provider in GetGeneratedProviders(providers))
-            {
-                var attributes = provider.GetAttributes();
-                var filteredAttributes = attributes
-                    .Where(attribute => !HasRemovedTypeOfArgument(attribute, _latestResult.RemoveCandidates))
-                    .ToArray();
-
-                if (filteredAttributes.Length == attributes.Count)
-                {
-                    continue;
-                }
-
-                _preWriteProviderAttributes.TryAdd(provider, [.. attributes]);
-                provider.Update(attributes: filteredAttributes);
-            }
-        }
-
-        private static bool HasRemovedTypeOfArgument(MethodBodyStatement statement, HashSet<string> removeCandidates)
-        {
-            var attribute = statement switch
-            {
-                AttributeStatement attributeStatement => attributeStatement,
-                SuppressionStatement suppression => suppression.AsStatement<AttributeStatement>(),
-                _ => null
-            };
-
-            if (attribute == null)
-            {
-                return false;
-            }
-
-            foreach (var argument in attribute.Arguments)
-            {
-                if (IsRemovedTypeOfArgument(argument, removeCandidates))
-                {
-                    return true;
-                }
-            }
-
-            foreach (var (_, argument) in attribute.PositionalArguments)
-            {
-                if (IsRemovedTypeOfArgument(argument, removeCandidates))
-                {
-                    return true;
-                }
-            }
-
-            return false;
-        }
-
-        private static bool IsRemovedTypeOfArgument(ValueExpression argument, HashSet<string> removeCandidates)
-            => argument is TypeOfExpression typeOf &&
-                removeCandidates.Contains(GetProviderTypeName(typeOf.Type));
-
         private static (HashSet<string> InternalizeCandidates, HashSet<string> PublicizeCandidates) GetPreWriteAccessibilityCandidates(IReadOnlyList<TypeProvider> providers)
         {
             var generatedProviders = GetGeneratedProviders(providers);
@@ -280,7 +201,7 @@ namespace Microsoft.TypeSpec.Generator
             var publicApiReferences = CloneReferences(publicGraph.References);
             var internalizeHelperRoots = GetHelperRootNames(generatedProviders, graph.Nodes, internalizeReachableWithoutHelpers, graph.References);
             internalizeRoots.UnionWith(internalizeHelperRoots);
-            var internalizeDeclaredNodes = GetGeneratedDeclaredNodes(generatedProviders, graph.Nodes, publicOnly: true);
+            var internalizeDeclaredNodes = GetPostProcessorDeclaredNodes(generatedProviders, graph.Nodes, publicOnly: true);
             var customInternalBoundaryNodes = GetCustomInternalBoundaryNodes(publicGraph, customInternalDeclarations);
             var publicizeDeclaredNodes = GetPublicizeDeclaredNodes(generatedProviders, graph.Nodes, internalizeDeclaredNodes);
             var generatedImplementationInternalDeclarations = GetGeneratedImplementationInternalTypeDeclarations(generatedProviders, generatedInternalDeclarations);

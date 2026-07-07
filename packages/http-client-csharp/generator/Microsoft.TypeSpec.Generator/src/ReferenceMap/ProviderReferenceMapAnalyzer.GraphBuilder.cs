@@ -35,10 +35,6 @@ namespace Microsoft.TypeSpec.Generator
                 AddTypeReference(references[current], provider.Type, nodes, serializationReferenceNamesByType);
                 AddTypeReference(references[current], provider.BaseType, nodes, serializationReferenceNamesByType);
                 AddTypeReference(references[current], provider.DeclaringTypeProvider?.Type, nodes, serializationReferenceNamesByType);
-                if (!publicOnly)
-                {
-                    AddAttributes(references[current], provider.Attributes, nodes, serializationReferenceNamesByType, includeArguments: false);
-                }
 
                 if (publicOnly && !provider.DeclarationModifiers.HasFlag(TypeSignatureModifiers.Public))
                 {
@@ -50,7 +46,7 @@ namespace Microsoft.TypeSpec.Generator
                     continue;
                 }
 
-                // Model factory signatures mention many models. Pre-write provider filtering
+                // Model factory signatures mention many models. The existing Roslyn post-processor
                 // removes factory methods for unreachable models, so model factory should only
                 // contribute helper dependencies, not model reachability edges.
                 if (IsModelFactoryProvider(provider))

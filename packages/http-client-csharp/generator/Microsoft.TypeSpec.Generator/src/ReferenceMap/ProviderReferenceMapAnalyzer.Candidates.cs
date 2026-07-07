@@ -36,7 +36,7 @@ namespace Microsoft.TypeSpec.Generator
             HashSet<string> nodes,
             HashSet<string> internalizeDeclaredNodes)
         {
-            var publicizeDeclaredNodes = GetGeneratedDeclaredNodes(generatedProviders, nodes, publicOnly: false);
+            var publicizeDeclaredNodes = GetPostProcessorDeclaredNodes(generatedProviders, nodes, publicOnly: false);
             return publicizeDeclaredNodes;
         }
 
@@ -283,7 +283,7 @@ namespace Microsoft.TypeSpec.Generator
             var removeReachable = GetReachableTypes(removeRoots, graph.References);
             AddBasePreservedReferences(generatedProviders, graph.Nodes, graph.References, removeReachable);
 
-            var removeDeclaredNodes = GetGeneratedDeclaredNodes(generatedProviders, graph.Nodes, publicOnly: false);
+            var removeDeclaredNodes = GetPostProcessorDeclaredNodes(generatedProviders, graph.Nodes, publicOnly: false);
             removeDeclaredNodes.ExceptWith(removeReachable);
             return removeDeclaredNodes;
         }

@@ -168,7 +168,7 @@ namespace Microsoft.TypeSpec.Generator
                 simpleNamesToRemove.Contains(StripGenericArity(GetSimpleName(returnTypeName)));
         }
 
-        private static HashSet<string> GetGeneratedDeclaredNodes(IReadOnlyList<TypeProvider> providers, HashSet<string> nodes, bool publicOnly)
+        private static HashSet<string> GetPostProcessorDeclaredNodes(IReadOnlyList<TypeProvider> providers, HashSet<string> nodes, bool publicOnly)
         {
             var generator = CodeModelGenerator.Instance;
             var declaredNodes = new HashSet<string>(StringComparer.Ordinal);

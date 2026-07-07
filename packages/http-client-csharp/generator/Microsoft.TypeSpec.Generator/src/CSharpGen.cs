@@ -256,6 +256,8 @@ namespace Microsoft.TypeSpec.Generator
         }
 
         private static bool ShouldKeepGeneratedFile(FileInfo file, HashSet<string> fileNamesToKeep)
-            => fileNamesToKeep.Contains(file.Name);
+            => fileNamesToKeep.Contains(file.Name) ||
+                file.Extension.Equals(".cs", StringComparison.Ordinal) &&
+                file.Name.EndsWith("Extensions.cs", StringComparison.Ordinal);
     }
 }

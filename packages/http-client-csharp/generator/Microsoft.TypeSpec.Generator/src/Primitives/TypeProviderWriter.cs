@@ -3,6 +3,7 @@
 
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using Microsoft.TypeSpec.Generator.Providers;
 using Microsoft.TypeSpec.Generator.Statements;
@@ -32,11 +33,57 @@ namespace Microsoft.TypeSpec.Generator.Primitives
                 WriteType(writer);
             }
 
+            PreserveExistingModelFactoryUsings(writer);
+
             foreach (var suppression in _provider.DisabledFileWarnings)
             {
                 suppression.RestoreStatement.Write(writer);
             }
             return new CodeFile(writer.ToString(), _provider.RelativeFilePath);
+        }
+
+        private void PreserveExistingModelFactoryUsings(CodeWriter writer)
+        {
+            if (_provider is not ModelFactoryProvider)
+            {
+                return;
+            }
+
+            var existingFilePath = Path.Combine(CodeModelGenerator.Instance.Configuration.OutputDirectory, _provider.RelativeFilePath);
+            if (!File.Exists(existingFilePath))
+            {
+                return;
+            }
+
+            foreach (var @namespace in ReadTopLevelUsingNamespaces(existingFilePath))
+            {
+                writer.UseNamespace(@namespace);
+            }
+        }
+
+        private static IEnumerable<string> ReadTopLevelUsingNamespaces(string filePath)
+        {
+            foreach (var line in File.ReadLines(filePath))
+            {
+                var trimmedLine = line.Trim();
+                if (trimmedLine.Length == 0 ||
+                    trimmedLine.StartsWith("//", StringComparison.Ordinal) ||
+                    trimmedLine.StartsWith("#", StringComparison.Ordinal))
+                {
+                    continue;
+                }
+
+                if (trimmedLine.StartsWith("using ", StringComparison.Ordinal) &&
+                    trimmedLine.EndsWith(";", StringComparison.Ordinal) &&
+                    !trimmedLine.StartsWith("using static ", StringComparison.Ordinal) &&
+                    !trimmedLine.Contains('='))
+                {
+                    yield return trimmedLine.Substring("using ".Length, trimmedLine.Length - "using ".Length - 1);
+                    continue;
+                }
+
+                break;
+            }
         }
 
         private bool IsPublicContext(TypeProvider provider)

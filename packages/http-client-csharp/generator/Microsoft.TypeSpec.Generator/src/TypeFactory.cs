@@ -21,6 +21,9 @@ namespace Microsoft.TypeSpec.Generator
 
         private ChangeTrackingDictionaryDefinition ChangeTrackingDictionaryProvider { get; } = new();
 
+        private OptionalDefinition? _optionalProvider;
+        private OptionalDefinition OptionalProvider => _optionalProvider ??= new();
+
         private Dictionary<InputModelType, ModelProvider?> InputTypeToModelProvider { get; } = [];
 
         public IDictionary<CSharpType, TypeProvider?> CSharpTypeMap { get; } = new Dictionary<CSharpType, TypeProvider?>(CSharpType.IgnoreNullableComparer);
